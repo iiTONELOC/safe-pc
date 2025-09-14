@@ -1,8 +1,18 @@
 """
-Author: Anthony Tropeano
-CYBV498: Senior Capstone in Cyber Operations
-Date: 2025-09-13
-Description: This module provides modular utilities.
+Description: This module provides reusable utilities.
+
+Modules exported by this package:
+
+- `logs`: Logging utils.
+
+- `crypto`: Cryptographic utilities for hashing and verification.
+
+Functions exported by this package:
+
+- `IS_VERBOSE()`: Checks if verbose mode is enabled via environment variable.
+
+- `IS_TESTING()`: Checks if testing mode is enabled via environment variable.
+
 """
 
 from os import getenv

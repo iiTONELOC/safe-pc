@@ -1,8 +1,18 @@
 """
-Author: Anthony Tropeano
-CYBV498: Senior Capstone in Cyber Operations
-Date: 09/13/2025
-Description: This module provides cryptographic utilities for the capstone package.
+Description: This module provides reusable cryptographic utilities.
+
+Functions exported by this module:
+
+- `compute_sha256(for_file_path: str) -> str`: Computes the SHA-256 hash of a file.
+
+- `verify_sha256(for_file_path: str, expected_hash: str) -> bool`:
+    Verifies the SHA-256 hash of a file against an expected hash.
+
+- `validate_sha256(sha256: str) -> bool`: Validates the format of a SHA-256 checksum.
+
+Constants:
+
+- `CHUNK_SIZE`: The size of chunks to read from files when computing hashes, 4096 bytes.
 """
 
 from hashlib import sha256
@@ -10,6 +20,7 @@ from logging import getLogger
 
 from capstone.utils import IS_VERBOSE
 
+CHUNK_SIZE = 4096
 logger = getLogger("capstone.utils.crypto" if __name__ == "__main__" else __name__)
 
 
@@ -26,7 +37,7 @@ def compute_sha256(for_file_path: str) -> str:
     hash_sha256 = sha256()
     try:
         with open(for_file_path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
+            for chunk in iter(lambda: f.read(CHUNK_SIZE), b""):
                 hash_sha256.update(chunk)
         if IS_VERBOSE():
             logger.info(f"SHA-256 for {for_file_path}: {hash_sha256.hexdigest()}")

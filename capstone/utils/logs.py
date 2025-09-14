@@ -1,8 +1,9 @@
 """
-Author: Anthony Tropeano
-CYBV498: Senior Capstone in Cyber Operations
-Date: 2025-09-13
-Description: Logging utilities for the capstone package.
+Description: This module provides reusable utilities for logging.
+
+Functions exported by this module:
+- `setup_logging(level: int = DEBUG, log_file: str = "capstone") -> Logger`:
+    Configures root logging once for the entire process and returns it.
 """
 
 from pathlib import Path
@@ -34,10 +35,10 @@ def setup_logging(level: int = DEBUG, log_file: str = "capstone") -> Logger:
     Returns the package logger for convenience.
 
     Args:
-        level: Root log level.
+        level: The level to set, i.e. INFO, DEBUG, ERROR, etc.
 
     Returns:
-        A configured root-level logger
+        The configured root-level logger
     """
 
     global _configured

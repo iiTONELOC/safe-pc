@@ -1,0 +1,38 @@
+site_name: SAFE-PC Docs
+site_url: https://iitoneloc.github.io/safe-pc/
+site_description: Documentation for the SAFE-PC project.
+site_author: Anthony Tropeano
+copyright: "&copy;2025, Anthony Tropeano"
+repo_url: https://github.com/iitoneloc/safe-pc
+repo_name: GitHub
+edit_uri: edit/main/docs/
+nav:
+  - Home: index.md
+  - API Reference:
+      - utils:
+        - utils: reference/utils/index.md
+        - utils.logs: reference/utils/logs.md
+        - utils.crypto: reference/crypto.md
+      
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: black        
+      accent: cyan          
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      primary: black
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google  
+            show_source: true

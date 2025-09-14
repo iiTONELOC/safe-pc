@@ -1,18 +1,21 @@
-# SAFE-PC: Secure Appliance Framework for End-of-Life PCs
+# SAFE-PC
 
 ![Python](https://img.shields.io/badge/python-3.13+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)
 
+## Secure Appliance Framework for End-of-Life PCs
+
 ## Screenshot
 
-![SAFE-PC](./docs/images/safe-pc.jpeg)
+![SAFE-PC](./images/safe-pc.jpeg)
 
 *Figure 1: SAFE-PC conceptual image (Studio-fi, n.d.).*
 
 ## Table of Contents
 
-- [SAFE-PC: Secure Appliance Framework for End-of-Life PCs](#safe-pc-secure-appliance-framework-for-end-of-life-pcs)
+- [SAFE-PC](#safe-pc)
+  - [Secure Appliance Framework for End-of-Life PCs](#secure-appliance-framework-for-end-of-life-pcs)
   - [Screenshot](#screenshot)
   - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
