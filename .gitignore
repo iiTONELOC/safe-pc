@@ -1,5 +1,24 @@
 # OS generated files
 .DS_Store
 
-# IDE generated files
-.vscode/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+*.egg-info/
+# Ansible
+*.retry
+.pytest_cache/
+
+# ISO build artifacts
+/work/
+/out/
+/tmp/
+/*.iso
+IGNORE
+
+
+data/
+log[s]/

@@ -1,5 +1,9 @@
 # SAFE-PC: Secure Appliance Framework for End-of-Life PCs
 
+![Python](https://img.shields.io/badge/python-3.13+-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)
+
 ## Screenshot
 
 ![SAFE-PC](./assets/images/safe-pc.jpeg)
@@ -11,6 +15,7 @@
 - [SAFE-PC: Secure Appliance Framework for End-of-Life PCs](#safe-pc-secure-appliance-framework-for-end-of-life-pcs)
   - [Screenshot](#screenshot)
   - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
   - [Description](#description)
   - [Academic Context](#academic-context)
   - [Overview](#overview)
@@ -19,12 +24,33 @@
   - [License](#license)
   - [Citation](#citation)
   - [References](#references)
+  
+## Installation
+
+Clone the repo and install dependencies:
+
+```sh
+# download repo
+git https://github.com/iiTONELOC/safe-pc.git
+cd safe-pc
+
+# create venv - On Windows its 'python' not python3. On Debian, python3-venv via apt is a required dependency
+python3 -m venv venv
+
+# actvate
+source venv/bin/activate 
+# On Windows: .venv\Scripts\activate
+
+# install dependencies - On Windows its python not python3
+python3 -m pip install -e .
+python3 -m pip install -r requirements.txt
+```
 
 ## Description
 
-This repository is under active development as part of a senior **Capstone Project** in Cybersecurity Engineering.  
+This repository is under active development as part of a senior **Capstone Project** in Cyber Operations - Engineering.  
 
-The goal of ***SAFE-PC*** is to demonstrate the feasibility of repurposing obsolete PCs into automated, cost-effective security appliances while simultaneously addressing the growing challenge of electronic waste.  
+The goal of ***`SAFE-PC`*** is to demonstrate the feasibility of repurposing obsolete PCs into `automated`, `cost-effective` `security appliances` while simultaneously addressing the growing challenge of `electronic waste`.  
 
 This project emphasizes:  
 
@@ -40,7 +66,7 @@ This repository represents the **hands-on implementation component** of a Cyber 
 
 As Windows 10 reaches end-of-life and millions of PCs face obsolescence, this project demonstrates that these devices can be repurposed into automated, cost-effective **security appliances**, commonly referred to as **UTM** (*Unified Threat Management*) devices, using open-source technologies and virtualization.  
 
-The motivation is twofold: 
+The motivation is twofold:
 
 1. **Windows 10 End of Support:** Microsoft will end support for Windows 10 in **October 2025**, leaving millions of still-functional PCs labeled as “obsolete” and destined for e-waste.  
 
