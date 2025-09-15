@@ -16,7 +16,7 @@
       
       
       
-        <link rel="next" href="reference/utils/">
+        <link rel="next" href="reference/proxmox/iso_downloader/">
       
       
       <link rel="icon" href="assets/images/favicon.png">
@@ -446,7 +446,7 @@
   
   
   <span class="md-ellipsis">
-    utils
+    proxmox
     
   </span>
   
@@ -456,6 +456,75 @@
         
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_1_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2_1">
+            <span class="md-nav__icon md-icon"></span>
+            proxmox
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/proxmox/iso_downloader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    .iso_downloader
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    utils
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_2">
             <span class="md-nav__icon md-icon"></span>
             utils
           </label>
@@ -468,12 +537,35 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/utils/" class="md-nav__link">
+      <a href="reference/utils/crypto/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    utils
+    .crypto
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/utils/downloader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    .downloader
     
   </span>
   
@@ -496,30 +588,7 @@
   
   
   <span class="md-ellipsis">
-    utils.logs
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="reference/crypto/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    utils.crypto
+    .logs
     
   </span>
   
@@ -723,21 +792,18 @@
 <li><a href="#references">References</a></li>
 </ul>
 <h2 id="installation">Installation</h2>
-<p>Clone the repo and install dependencies:</p>
 <pre><code class="language-sh"># download repo
-git https://github.com/iiTONELOC/safe-pc.git
+git clone https://github.com/iiTONELOC/safe-pc.git
 cd safe-pc
 
-# create venv - On Windows its 'python' not python3. On Debian, python3-venv via apt is a required dependency
-python3 -m venv venv
+# install
+python3 -m capstone.scripts install
 
-# actvate
-source venv/bin/activate 
-# On Windows: .venv\Scripts\activate
+# for development use (needed for tests)
+python3 -m capstone.scripts install-dev
 
-# install dependencies - On Windows its python not python3
-python3 -m pip install -e .
-python3 -m pip install -r requirements.txt
+# activate virtual environment
+python3 source .venv/bin/activate
 </code></pre>
 <h2 id="description">Description</h2>
 <p>This repository is under active development as part of a senior <strong>Capstone Project</strong> in Cyber Operations - Engineering.  </p>

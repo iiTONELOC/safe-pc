@@ -12,11 +12,13 @@
         <meta name="author" content="Anthony Tropeano">
       
       
-        <link rel="canonical" href="https://iitoneloc.github.io/safe-pc/reference/utils/logs/">
+        <link rel="canonical" href="https://iitoneloc.github.io/safe-pc/reference/utils/downloader/">
       
       
-        <link rel="prev" href="../downloader/">
+        <link rel="prev" href="../crypto/">
       
+      
+        <link rel="next" href="../logs/">
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
@@ -24,7 +26,7 @@
     
     
       
-        <title>.logs - SAFE-PC Docs</title>
+        <title>.downloader - SAFE-PC Docs</title>
       
     
     
@@ -78,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#capstoneutilslogs" class="md-skip">
+        <a href="#capstoneutilsdownloader" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              .logs
+              .downloader
             
           </span>
         </div>
@@ -411,29 +413,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../downloader/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    .downloader
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -451,7 +430,7 @@
   
   
   <span class="md-ellipsis">
-    .logs
+    .downloader
     
   </span>
   
@@ -464,7 +443,7 @@
   
   
   <span class="md-ellipsis">
-    .logs
+    .downloader
     
   </span>
   
@@ -487,18 +466,18 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#capstone.utils.logs" class="md-nav__link">
+  <a href="#capstone.utils.downloader" class="md-nav__link">
     <span class="md-ellipsis">
-      logs
+      downloader
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#capstone.utils.logs.setup_logging" class="md-nav__link">
+  <a href="#capstone.utils.downloader.handle_download" class="md-nav__link">
     <span class="md-ellipsis">
-      setup_logging
+      handle_download
     </span>
   </a>
   
@@ -508,6 +487,29 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    .logs
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -555,18 +557,18 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#capstone.utils.logs" class="md-nav__link">
+  <a href="#capstone.utils.downloader" class="md-nav__link">
     <span class="md-ellipsis">
-      logs
+      downloader
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#capstone.utils.logs.setup_logging" class="md-nav__link">
+  <a href="#capstone.utils.downloader.handle_download" class="md-nav__link">
     <span class="md-ellipsis">
-      setup_logging
+      handle_download
     </span>
   </a>
   
@@ -591,20 +593,15 @@
   
 
 
-<h1 id="capstoneutilslogs">capstone.utils.logs</h1>
+<h1 id="capstoneutilsdownloader">capstone.utils.downloader</h1>
 
 
 <div class="doc doc-object doc-module">
 
 
 
-<a id="capstone.utils.logs"></a>
+<a id="capstone.utils.downloader"></a>
     <div class="doc doc-contents first">
-
-        <p>Description: This module provides reusable utilities for logging.</p>
-<p>Functions exported by this module:
-- <code>setup_logging(level: int = DEBUG, log_file: str = "capstone") -&gt; Logger</code>:
-    Configures root logging once for the entire process and returns it.</p>
 
 
 
@@ -629,16 +626,19 @@
 <div class="doc doc-object doc-function">
 
 
-<h2 id="capstone.utils.logs.setup_logging" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">setup_logging</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">DEBUG</span><span class="p">,</span> <span class="n">log_file</span><span class="o">=</span><span class="s1">&#39;capstone&#39;</span><span class="p">)</span></code>
+<h2 id="capstone.utils.downloader.handle_download" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">handle_download</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">dest_path</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span></code>
 
 </h2>
 
 
     <div class="doc doc-contents ">
 
-        <p>Configure root logging once for the entire process.
-Returns the package logger for convenience.</p>
+        <p>Downloads a file from the specified URL to the given destination path.</p>
+<p>The function attempts to download the file using parallel chunking if the server supports
+byte-range requests and the file size is known. Otherwise, it falls back to a single-threaded
+download. The number of parallel threads can be specified.</p>
+<p>If the download fails, the partially downloaded file is removed and the error is logged.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -654,25 +654,57 @@ Returns the package logger for convenience.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                <code>level</code>
+                <code>url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The URL of the file to download.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dest_path</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The local path where the downloaded file will be saved.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>num_threads</code>
             </td>
             <td>
                   <code><span title="int">int</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The level to set, i.e. INFO, DEBUG, ERROR, etc.</p>
+                <p>Number of parallel threads to use for downloading. Defaults to 4.</p>
               </div>
             </td>
             <td>
-                  <code><span title="logging.DEBUG">DEBUG</span></code>
+                  <code>4</code>
             </td>
           </tr>
       </tbody>
     </table>
 
 
-    <p><span class="doc-section-title">Returns:</span></p>
+<p><span class="doc-section-title">Raises:</span></p>
     <table>
       <thead>
         <tr>
@@ -683,11 +715,11 @@ Returns the package logger for convenience.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="logging.Logger">Logger</span></code>
+                  <code><span title="Exception">Exception</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The configured root-level logger</p>
+                <p>If the download fails for any reason other than KeyboardInterrupt.</p>
               </div>
             </td>
           </tr>
@@ -695,93 +727,106 @@ Returns the package logger for convenience.</p>
     </table>
 
 
+<details class="notes" open>
+  <summary>Notes</summary>
+  <ul>
+<li>In testing, more than 4 threads caused 503 errors on some servers.</li>
+</ul>
+</details>
+
             <details class="quote">
-              <summary>Source code in <code>capstone/utils/logs.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">32</span>
-<span class="normal">33</span>
-<span class="normal">34</span>
-<span class="normal">35</span>
-<span class="normal">36</span>
-<span class="normal">37</span>
-<span class="normal">38</span>
-<span class="normal">39</span>
-<span class="normal">40</span>
-<span class="normal">41</span>
-<span class="normal">42</span>
-<span class="normal">43</span>
-<span class="normal">44</span>
-<span class="normal">45</span>
-<span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span>
-<span class="normal">49</span>
-<span class="normal">50</span>
-<span class="normal">51</span>
-<span class="normal">52</span>
-<span class="normal">53</span>
-<span class="normal">54</span>
-<span class="normal">55</span>
-<span class="normal">56</span>
-<span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span>
-<span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span>
-<span class="normal">73</span>
-<span class="normal">74</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">setup_logging</span><span class="p">(</span><span class="n">level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEBUG</span><span class="p">,</span> <span class="n">log_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;capstone&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Logger</span><span class="p">:</span>
+              <summary>Source code in <code>capstone/utils/downloader.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">handle_download</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dest_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">num_threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Configure root logging once for the entire process.</span>
-<span class="sd">    Returns the package logger for convenience.</span>
+<span class="sd">    Downloads a file from the specified URL to the given destination path.</span>
+
+<span class="sd">    The function attempts to download the file using parallel chunking if the server supports</span>
+<span class="sd">    byte-range requests and the file size is known. Otherwise, it falls back to a single-threaded</span>
+<span class="sd">    download. The number of parallel threads can be specified.</span>
+
+<span class="sd">    If the download fails, the partially downloaded file is removed and the error is logged.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        level: The level to set, i.e. INFO, DEBUG, ERROR, etc.</span>
+<span class="sd">        url (str): The URL of the file to download.</span>
+<span class="sd">        dest_path (Path): The local path where the downloaded file will be saved.</span>
+<span class="sd">        num_threads (int, optional): Number of parallel threads to use for downloading. Defaults to 4.</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">        The configured root-level logger</span>
+<span class="sd">    Raises:</span>
+<span class="sd">        Exception: If the download fails for any reason other than KeyboardInterrupt.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        - In testing, more than 4 threads caused 503 errors on some servers.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># fetch headers with HEAD request to check for byte-range support and get file size</span>
+        <span class="n">_head</span> <span class="o">=</span> <span class="n">head</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">allow_redirects</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">_head</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
 
-    <span class="k">global</span> <span class="n">_configured</span>
-    <span class="k">if</span> <span class="n">_configured</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">getLogger</span><span class="p">(</span><span class="n">log_file</span><span class="p">)</span>
+        <span class="n">size_str</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">_head</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Content-Length&quot;</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">)</span>
+        <span class="n">size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">size_str</span><span class="p">)</span>
+        <span class="n">accept_ranges</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">_head</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Accept-Ranges&quot;</span><span class="p">,</span> <span class="s2">&quot;none&quot;</span><span class="p">)</span>
 
-    <span class="n">log_path</span> <span class="o">=</span> <span class="n">_project_log_file</span><span class="p">()</span>
-    <span class="n">fmt</span> <span class="o">=</span> <span class="n">Formatter</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> - [</span><span class="si">%(name)s</span><span class="s2">] - </span><span class="si">%(levelname)s</span><span class="s2"> - </span><span class="si">%(message)s</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># if we can use parallel downloading, do so</span>
+        <span class="k">if</span> <span class="n">accept_ranges</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;bytes&quot;</span> <span class="ow">and</span> <span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">num_threads</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">_parallel_downloader</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">dest_path</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">num_threads</span><span class="p">)</span>
+        <span class="c1"># otherwise fall back to single connection download</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_single_downloader</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">dest_path</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
 
-    <span class="c1"># File handler (append mode, no rotation)</span>
-    <span class="n">file_handler</span> <span class="o">=</span> <span class="n">FileHandler</span><span class="p">(</span><span class="n">log_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;a&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">IS_TESTING</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
-    <span class="n">file_handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Download complete: </span><span class="si">{</span><span class="n">dest_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="c1"># Console handler</span>
-    <span class="n">stream_handler</span> <span class="o">=</span> <span class="n">StreamHandler</span><span class="p">()</span>
-    <span class="n">stream_handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
-
-    <span class="c1"># config logger</span>
-    <span class="n">root</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">()</span>
-    <span class="n">root</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
-    <span class="n">root</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">log_file</span>
-    <span class="n">root</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">level</span><span class="p">)</span>
-    <span class="n">root</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">file_handler</span><span class="p">)</span>
-    <span class="n">root</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">stream_handler</span><span class="p">)</span>
-
-    <span class="n">root</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot; Logging initialized. Log file: ./</span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">log_path</span><span class="p">)</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">())</span><span class="si">}</span><span class="s2"> &quot;</span><span class="o">.</span><span class="n">center</span><span class="p">(</span>
-            <span class="mi">60</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span>
-        <span class="p">)</span>
-    <span class="p">)</span>
-
-    <span class="n">_configured</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="k">return</span> <span class="n">getLogger</span><span class="p">(</span><span class="n">log_file</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="ne">KeyboardInterrupt</span><span class="p">):</span>
+            <span class="k">return</span>
+        <span class="n">LOGGER</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Download failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dest_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="n">dest_path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+        <span class="k">raise</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
