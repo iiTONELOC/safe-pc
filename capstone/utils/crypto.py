@@ -1,18 +1,5 @@
 """
 Description: This module provides reusable cryptographic utilities.
-
-Functions exported by this module:
-
-- `compute_sha256(for_file_path: str) -> str`: Computes the SHA-256 hash of a file.
-
-- `verify_sha256(for_file_path: str, expected_hash: str) -> bool`:
-    Verifies the SHA-256 hash of a file against an expected hash.
-
-- `validate_sha256(sha256: str) -> bool`: Validates the format of a SHA-256 checksum.
-
-Constants:
-
-- `CHUNK_SIZE`: The size of chunks to read from files when computing hashes, 4096 bytes.
 """
 
 from hashlib import sha256

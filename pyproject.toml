@@ -21,8 +21,29 @@ packages = ["capstone"]
 [project.optional-dependencies]
 dev = [
   "pytest",
+  "pytest-cov",
   "black",
   "mkdocs",
   "mkdocstrings[python]",
   "mkdocs-material"
+]
+
+[project.scripts]
+cap = "capstone.scripts:main"
+
+[tool.coverage.run]
+branch = true
+source = ["capstone"]
+omit = [
+  "capstone/scripts.py",
+  "capstone/utils/downloader.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+  "if __name__ == .__main__.:",
+  "if IS_VERBOSE():",
+  "logger.*",
+  "raise",
+  "except .*:",
 ]

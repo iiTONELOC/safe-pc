@@ -1,8 +1,10 @@
-# SAFE-PC: Secure Appliance Framework for End-of-Life PCs
+# SAFE-PC
 
 ![Python](https://img.shields.io/badge/python-3.13+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)
+
+## Secure Appliance Framework for End-of-Life PCs
 
 ## Screenshot
 
@@ -12,7 +14,8 @@
 
 ## Table of Contents
 
-- [SAFE-PC: Secure Appliance Framework for End-of-Life PCs](#safe-pc-secure-appliance-framework-for-end-of-life-pcs)
+- [SAFE-PC](#safe-pc)
+  - [Secure Appliance Framework for End-of-Life PCs](#secure-appliance-framework-for-end-of-life-pcs)
   - [Screenshot](#screenshot)
   - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
@@ -27,23 +30,19 @@
   
 ## Installation
 
-Clone the repo and install dependencies:
-
 ```sh
 # download repo
-git https://github.com/iiTONELOC/safe-pc.git
+git clone https://github.com/iiTONELOC/safe-pc.git
 cd safe-pc
 
-# create venv - On Windows its 'python' not python3. On Debian, python3-venv via apt is a required dependency
-python3 -m venv venv
+# install deps
+python3 -m capstone.scripts install
 
-# actvate
-source venv/bin/activate 
-# On Windows: .venv\Scripts\activate
+# for development use (needed for tests)
+python3 -m capstone.scripts install-dev
 
-# install dependencies - On Windows its python not python3
-python3 -m pip install -e .
-python3 -m pip install -r requirements.txt
+# activate virtual environment
+python3 source .venv/bin/activate
 ```
 
 ## Description

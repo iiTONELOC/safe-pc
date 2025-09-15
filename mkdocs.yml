@@ -9,10 +9,13 @@ edit_uri: edit/main/docs/
 nav:
   - Home: index.md
   - API Reference:
+      - proxmox:
+        - .iso_downloader: reference/proxmox/iso_downloader.md
       - utils:
-        - utils: reference/utils/index.md
-        - utils.logs: reference/utils/logs.md
-        - utils.crypto: reference/crypto.md
+        
+        - .crypto: reference/utils/crypto.md
+        - .downloader: reference/utils/downloader.md
+        - .logs: reference/utils/logs.md
       
 theme:
   name: material

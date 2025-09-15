@@ -5,12 +5,13 @@
 # Python
 __pycache__/
 *.pyc
-venv/
+[.]venv/
 .env
 *.egg-info/
 # Ansible
 *.retry
 .pytest_cache/
+.coverage
 
 # ISO build artifacts
 /work/
@@ -22,3 +23,5 @@ IGNORE
 
 data/
 log[s]/
+site/
+htmlcov/

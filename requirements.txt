@@ -5,3 +5,4 @@ pluggy==1.6.0
 Pygments==2.19.2
 soupsieve==2.8
 typing_extensions==4.15.0
+tqdm==4.67.1
