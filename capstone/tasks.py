@@ -6,6 +6,17 @@ from pathlib import Path
 
 VENV = Path(".venv")
 BIN = VENV / "bin"
+TASKS = {
+    "install-dev": f"{BIN}/pip install -e '.[dev]'",
+    "install": f"{BIN}/pip install -e .",
+    "test": f"{BIN}/pytest --cov=capstone tests/",
+    "test-coverage": f"{BIN}/pytest --cov=capstone tests/ --cov-report=html",
+    "lint": f"{BIN}/black .",
+    "docs-dev": f"{BIN}/mkdocs serve",
+    "docs-build": f"{BIN}/mkdocs build",
+    "docs-deploy": f"{BIN}/mkdocs gh-deploy",
+    "prox-dl-iso": f"{BIN}/python -m capstone.proxmox.iso.downloader",
+}
 
 
 def _ensure_venv():
@@ -31,22 +42,6 @@ def _run(cmd: str):
     return subprocess.call(cmd, shell=True, executable="/bin/bash")
 
 
-"""
-TASKS: Is a dictionary of tasks or scripts that can be run from the command line
-"""
-TASKS = {
-    "install-dev": f"{BIN}/pip install -e '.[dev]'",
-    "install": f"{BIN}/pip install -e .",
-    "test": f"{BIN}/pytest --cov=capstone tests/",
-    "test-coverage": f"{BIN}/pytest --cov=capstone tests/ --cov-report=html",
-    "lint": f"{BIN}/black .",
-    "docs-dev": f"{BIN}/mkdocs serve",
-    "docs-build": f"{BIN}/mkdocs build",
-    "docs-deploy": f"{BIN}/mkdocs gh-deploy",
-    "prox-dl-iso": f"{BIN}/python -m capstone.proxmox.iso_downloader",
-}
-
-
 def main():
     """
     Parses command-line arguments to select and run a specified task.
@@ -60,7 +55,7 @@ def main():
         SystemExit: If the specified task is not found or after running the task.
     """
 
-    parser = argparse.ArgumentParser(description="Task runner (npm run style)")
+    parser = argparse.ArgumentParser(description="Task runner (npm style)")
     parser.add_argument("task", help="Task to run")
     args = parser.parse_args()
 

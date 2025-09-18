@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Automated framework for repurposing obsolete PCs into cybersecurity appliances"
 authors = [{ name = "Anthony Tropeano" }]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dynamic = ["dependencies"]
 
 [tool.setuptools.dynamic]
@@ -29,13 +29,13 @@ dev = [
 ]
 
 [project.scripts]
-cap = "capstone.scripts:main"
+cap = "capstone.tasks:main"
 
 [tool.coverage.run]
 branch = true
 source = ["capstone"]
 omit = [
-  "capstone/scripts.py",
+  "capstone/tasks.py",
   "capstone/utils/downloader.py",
 ]
 

@@ -14,7 +14,7 @@ def test_project_log_dir():
     log_dir = logs._project_log_dir()  # type: ignore
     assert log_dir.exists() and log_dir.is_dir()
     assert log_dir.name == "logs"
-    assert log_dir.parent.name == "SAFE-PC"
+    assert log_dir.parent.name == "safe_pc"
 
 
 def test_project_log_file():
@@ -22,7 +22,7 @@ def test_project_log_file():
     assert log_file.exists() and log_file.is_file()
     assert log_file.suffix == ".log"
     assert log_file.parent.name == "logs"
-    assert log_file.parent.parent.name == "SAFE-PC"
+    assert log_file.parent.parent.name == "safe_pc"
     assert (
         log_file.name == "capstone_tests.log"
         if logs.IS_TESTING()

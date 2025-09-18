@@ -7,9 +7,12 @@ Functions exported by this module:
 """
 
 from pathlib import Path
-from logging import Logger, Formatter, StreamHandler, FileHandler, DEBUG, getLogger
+from logging.handlers import RotatingFileHandler
+from logging import Logger, Formatter, StreamHandler, DEBUG, getLogger
 from capstone.utils import IS_TESTING
 
+
+BACKUP_LOG_COUNT = 5
 _configured = False
 
 
@@ -22,7 +25,7 @@ def _project_log_dir() -> Path:
 
 
 def _project_log_file():
-
+    """Get the project's log file path."""
     log_file = "capstone_tests" if IS_TESTING() else "capstone"
     log_dir = _project_log_dir()
     log_path = log_dir / f"{log_file}.log"
@@ -48,8 +51,13 @@ def setup_logging(level: int = DEBUG, log_file: str = "capstone") -> Logger:
     log_path = _project_log_file()
     fmt = Formatter("%(asctime)s - [%(name)s] - %(levelname)s - %(message)s")
 
-    # File handler (append mode, no rotation)
-    file_handler = FileHandler(log_path, mode="a" if not IS_TESTING() else "w")
+    # File handler with rotation (10 MB per file, keep 5 backups)
+
+    file_handler = RotatingFileHandler(
+        log_path,
+        mode="a" if not IS_TESTING() else "w",
+        backupCount=BACKUP_LOG_COUNT,
+    )
     file_handler.setFormatter(fmt)
 
     # Console handler
@@ -66,7 +74,7 @@ def setup_logging(level: int = DEBUG, log_file: str = "capstone") -> Logger:
 
     root.info(
         f" Logging initialized. Log file: ./{Path(log_path).relative_to(Path.cwd())} ".center(
-            60, "*"
+            70, "*"
         )
     )
 

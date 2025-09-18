@@ -10,10 +10,10 @@ import tempfile
 from pathlib import Path
 from shutil import rmtree
 from capstone.utils.crypto import validate_sha256
-from capstone.proxmox.iso_downloader import (
-    get_latest_proxmox_iso_url,
+from capstone.proxmox.iso.downloader import (
     validate_iso_url,
     get_iso_folder_path,
+    get_latest_proxmox_iso_url,
     _validate_latest,  # type: ignore
     _need_to_download,  # type: ignore
     _handle_download,  # type: ignore
@@ -99,13 +99,13 @@ def test_need_to_download():
 
 
 def test_handle_download(monkeypatch: pytest.MonkeyPatch) -> None:
-    import capstone.proxmox.iso_downloader as iso_downloader
+    import capstone.proxmox.iso.downloader as downloader
 
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir: Path = Path(tmp)
         dest: Path = tmpdir / "file.iso"
 
-        # --- Case 1: Successful download ---
+        #  Case 1: Successful download
         called: dict[str, object] = {}
 
         def fake_download(url: str, path: Path) -> None:
@@ -116,25 +116,25 @@ def test_handle_download(monkeypatch: pytest.MonkeyPatch) -> None:
             called["sha"] = path
             return "abc123"
 
-        monkeypatch.setattr(iso_downloader, "handle_download", fake_download)
-        monkeypatch.setattr(iso_downloader, "compute_sha256", fake_sha256)
+        monkeypatch.setattr(downloader, "handle_download", fake_download)
+        monkeypatch.setattr(downloader, "compute_sha256", fake_sha256)
 
-        iso_downloader._handle_download("http://example.com/file.iso", dest)  # type: ignore
+        _handle_download("http://example.com/file.iso", dest)  # type: ignore
 
         assert called["download"][0] == "http://example.com/file.iso"  # type: ignore
         assert called["download"][1] == dest  # type: ignore
         assert called["sha"] == str(dest)
         assert dest.with_suffix(".sha256").read_text() == "abc123"
 
-        # --- Case 2: Download failure ---
+        #  Case 2: Download failure
         def bad_download(url: str, path: Path) -> None:
             path.write_text("BROKEN DATA")
             raise RuntimeError("network fail")
 
-        monkeypatch.setattr(iso_downloader, "handle_download", bad_download)
+        monkeypatch.setattr(downloader, "handle_download", bad_download)
 
         with pytest.raises(RuntimeError):
-            iso_downloader._handle_download("http://bad.com/file.iso", dest)  # type: ignore
+            _handle_download("http://bad.com/file.iso", dest)  # type: ignore
 
         # The dest file should have been cleaned up
         assert not dest.exists()

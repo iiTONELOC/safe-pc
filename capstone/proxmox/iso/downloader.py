@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 
 
 LOGGER = getLogger(
-    "capstone.proxmox.iso_downloader" if __name__ == "__main__" else __name__
+    "capstone.proxmox.iso.downloader" if __name__ == "__main__" else __name__
 )
 
 
@@ -31,9 +31,9 @@ def get_iso_folder_path(iso_name: str) -> Path:
         Path: The full path to the ISOs folder.
     """
     DATA_DIR = (
-        Path(__file__).resolve().parents[2] / "data"
+        Path(__file__).resolve().parents[3] / "data"
         if not IS_TESTING()
-        else Path(__file__).resolve().parents[2] / "tests"
+        else Path(__file__).resolve().parents[3] / "tests"
     )
     ISO_DIR = DATA_DIR / "isos"
 
@@ -45,7 +45,7 @@ def get_iso_folder_path(iso_name: str) -> Path:
 
 
 def validate_iso_url(url: str) -> bool:
-    """Validates the Proxmox VE ISO URL format.
+    """Validates the URL for the Proxmox ISO.
 
     Args:
         url (str): The ISO download URL to validate.
@@ -119,7 +119,8 @@ def _validate_latest(url: str, sha256: str) -> bool:
 
 
 def _need_to_download(iso_path: Path, expected_sha256: str) -> bool:
-    """Determines if the ISO needs to be downloaded based on its existence and SHA-256 checksum.
+    """Determines if the ISO needs to be downloaded based on its existence and
+    SHA-256 checksum.
 
     Args:
         iso_path (Path): The path to the ISO file.
@@ -166,7 +167,20 @@ def _handle_download(url: str, dest_path: Path):
 
 
 def main():  # pragma: no cover start
-    """Main Entry point for the Proxmox ISO downloader module."""
+    """Main Entry point for the Proxmox ISO downloader module.
+
+    Flow:
+
+    1. Get the latest ISO URL and SHA-256 checksum from the Proxmox downloads page.
+
+    2. Validate the URL and checksum format to ensure data is as expected.
+
+    3. Check if the ISO already exists and if its checksum matches.
+
+    4. If not, download the ISO and save it to the data/isos folder.
+
+    5. Verify the downloaded ISO's checksum.
+    """
     setup_logging()
 
     # 1. get the url and hash for the latest iso
