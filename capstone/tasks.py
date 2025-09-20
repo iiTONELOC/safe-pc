@@ -12,6 +12,7 @@ TASKS = {
     "test": f"{BIN}/pytest --cov=capstone tests/",
     "test-coverage": f"{BIN}/pytest --cov=capstone tests/ --cov-report=html",
     "lint": f"{BIN}/black .",
+    "answer-server": f"{BIN}/python -m capstone.proxmox.iso.answer_server",
     "docs-dev": f"{BIN}/mkdocs serve",
     "docs-build": f"{BIN}/mkdocs build",
     "docs-deploy": f"{BIN}/mkdocs gh-deploy",
@@ -49,7 +50,7 @@ def main():
     The idea is like npm scripts, you can run them with `cap <task>` from the command
     line, after installation.
 
-    To run directly without installation, use `python3 -m capstone.scripts <task>`.
+    To run directly without installation, use `python3 -m capstone.tasks <task>`.
 
     Raises:
         SystemExit: If the specified task is not found or after running the task.
