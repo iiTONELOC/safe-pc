@@ -115,16 +115,23 @@ if [ -z "$MGMT" ]; then
   exit 1
 fi
 
+# get its MAC address
+MGMT_MAC=$(cat /sys/class/net/$MGMT/address)
+if [ -z "$MGMT_MAC" ]; then
+  echo "ERROR: Failed to get MAC address for $MGMT" >&2
+  exit 1
+fi
+
 # Bring link up
 ip link set dev "$MGMT" up
 ip addr add $PROXMOX_IP dev "$MGMT"
 ip route add default via $GATEWAY_IP
 echo "nameserver $GATEWAY_IP" > /etc/resolv.conf
 
-# Call config server(curl is not in the initrd, so using wget)
+# Call config server (wget only, curl not available in initrd)
 RESPONSE=$(wget -qO- \
   --header="Content-Type: application/json" \
-  --post-data="{\"disk\":\"$DISK\",\"mgmt_nic\":\"$MGMT\"}" \
+  --post-data="{\"disk\":\"$DISK\",\"mgmt_nic\":\"$MGMT\",\"mgmt_mac\":\"$MGMT_MAC\"}" \
   "$CONFIG_SERVER" \
   --server-response 2>&1 | awk '/^  HTTP/{print $2}' | tail -1)
 
@@ -135,4 +142,8 @@ if [ "$RESPONSE" -ne 200 ]; then
   exit 1
 fi
 
+# Bring link down, removing any previous config so it doesn't interfere with the installer
+ip addr flush dev "$MGMT"
+ip link set dev "$MGMT" down
+echo "Discovery complete. Disk: $DISK, Mgmt NIC: $MGMT ($MGMT_MAC)"
 exit 0

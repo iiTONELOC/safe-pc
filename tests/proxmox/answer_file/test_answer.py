@@ -11,7 +11,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 
-from capstone.proxmox.answer_file.answer import (
+from capstone.proxmox.answer_file.answer_file import (
     Global,
     Network,
     ZfsOpts,

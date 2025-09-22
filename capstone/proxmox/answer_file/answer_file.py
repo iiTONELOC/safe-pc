@@ -215,7 +215,7 @@ class Global(BaseModel):
             hash_part = pwd.split("$")[-1]
             if not validate_sha512(hash_part):
                 raise ValueError(
-                    "root-password-hashed must contain a valid SHA-256 hash"
+                    "root-password-hashed must contain a valid SHA-512 hash"
                 )
         return pwd
 
