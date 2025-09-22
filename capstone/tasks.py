@@ -10,6 +10,7 @@ TASKS = {
     "install-dev": f"{BIN}/pip install -e '.[dev]'",
     "install": f"{BIN}/pip install -e .",
     "test": f"{BIN}/pytest --cov=capstone tests/",
+    "test-verbose": f"{BIN}/pytest -v --cov=capstone tests/",
     "test-coverage": f"{BIN}/pytest --cov=capstone tests/ --cov-report=html",
     "lint": f"{BIN}/black .",
     "answer-server": f"{BIN}/python -m capstone.proxmox.iso.answer_server",

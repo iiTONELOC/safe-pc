@@ -1,5 +1,6 @@
 #!/bin/sh
-# This script discovers the fastest non removable storage and the on-board nic to be used in the auto installer
+# This script discovers the fastest non removable storage and the on-board nic to be used in the
+# auto installer
 
 DISK=""
 MGMT=""

@@ -7,6 +7,18 @@
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "ms-python.black-formatter"
     },
+    "[shellscript]": {
+        "editor.wordWrapColumn": 100,
+        "editor.rulers": [
+            100
+        ],
+        "editor.formatOnSave": true,
+    },
     "python-envs.defaultEnvManager": "ms-python.python:venv",
     "python-envs.pythonProjects": [],
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
 }
