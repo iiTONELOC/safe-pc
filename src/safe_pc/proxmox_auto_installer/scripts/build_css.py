@@ -9,11 +9,10 @@ from pathlib import Path
 from sys import platform, argv, exit
 from subprocess import run, CalledProcessError
 
-cmd = ["npm", "run", "build"]
-TAILWIND_DIR = Path(__file__).resolve().parent / ".." / "front_end" / "tailwindcss"
-
 
 def build_css(args=None):
+    cmd = ["npm", "run", "build"]
+    TAILWIND_DIR = Path(__file__).resolve().parent / ".." / "front_end" / "tailwindcss"
     args = args or argv
 
     # On Windows, the npm command is really npm.cmd and might fail otherwise

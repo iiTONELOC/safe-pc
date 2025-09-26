@@ -4,7 +4,7 @@
   "description": "Tailwindcss module for Proxmox Auto Installer",
   "scripts": {
     "build": "tailwindcss -i ./styles/app.css -o ../static/css/tailwind.css --minify",
-    "build:dev": "npx @tailwindcss/cli -i ./styles/app.css -o ../static/css/tailwind.css --watch"
+    "dev": "concurrently -n TAILWIND,PYTHON,RELOAD -c yellow,blue,green \"npx tailwindcss -i ./styles/app.css -o ../static/css/tailwind.css --watch\" \"nodemon --watch ../../back_end --ext py --exec \\\"python ../../back_end/server.py dev\\\"\" \"nodemon --watch ../../front_end/**/* --ext js,html,css --exec \\\"curl -s -X POST http://localhost:3308/trigger-reload\\\"\""
   },
   "keywords": [],
   "author": "Anthony Tropeano",
@@ -12,6 +12,8 @@
   "type": "commonjs",
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.13",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.10",
     "tailwindcss": "^4.1.13"
   }
 }

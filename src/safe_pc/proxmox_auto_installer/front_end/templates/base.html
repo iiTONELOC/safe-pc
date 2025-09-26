@@ -3,17 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SAFE-PC Maker</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self'; style-src 'self'; script-src 'self'; img-src 'self';"
+    />
+    <title>Safe-PC Maker</title>
+    <link
+      rel="shortcut icon"
+      href="{{url_for('static',path='/images/computer.svg')}}"
+      type="image/svg"
+    />
     <link
       href="{{url_for('static',path='/css/tailwind.css')}}"
       rel="stylesheet"
       type="text/css"
     />
+    {% if DEV %}
+    <script src="{{url_for('static',path='/js/hot-reload.js')}}"></script>
+    {% endif %}
   </head>
   <body>
-    <main class="min-h-screen">
+    <main class="min-h-screen bg-gray-900">
       <section>
-        <h1>Hello, World!</h1>
+        <h1>Who needs frameworks for hot-reloads?</h1>
       </section>
     </main>
   </body>

@@ -10,7 +10,6 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard] (>=0.117.1,<0.118.0)",
     "uvicorn (>=0.37.0,<0.38.0)"
-   
 ]
 
 [tool.poetry]
@@ -21,5 +20,7 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
+dev = "safe_pc.proxmox_auto_installer.scripts.run_dev:main"
 start = "safe_pc.proxmox_auto_installer.back_end.server:main"
-start-dev = "safe_pc.proxmox_auto_installer.scripts.run_dev:run_all"
+
+

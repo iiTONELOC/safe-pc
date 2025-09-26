@@ -1,88 +1,147 @@
-from pathlib import Path
 from asyncio import run
-from importlib import reload
+from pathlib import Path
+from sys import exit, argv
+from safe_pc.utils import handle_keyboard_interrupt
+from safe_pc.proxmox_auto_installer.back_end.routes import PiRoutes
+from safe_pc.proxmox_auto_installer.back_end.helpers import DevHelpers
+
+
 from uvicorn import Config, Server
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI, Request, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 
 
-CSP_POLICY = (
-    "default-src 'self'; "
-    "script-src 'self'; "
-    "style-src 'self'; "
-    "img-src 'self' data:; "
-)
-
-CORS_ORIGINS = [
-    "http://localhost",
-    "http://localhost:3308",
-    "http://127.0.0.1",
-    "http://127.0.0.1:3308",
-    "http://[::1]",
-    "http://[::1]:3308",
-]
-
-CURRENT_DIR = Path(__file__).resolve().parent
-
-TEMPLATES = Jinja2Templates(
-    directory=str(object=CURRENT_DIR.parent / "front_end" / "templates")
-)
-STATIC_DIR = str(object=CURRENT_DIR.parent / "front_end" / "static")
+_CURRENT_DIR = Path(__file__).resolve().parent
+_MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app"
+_DEV_MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app_dev"
 
 
-def create_app() -> FastAPI:
-    app = FastAPI()
-    app.add_middleware(
-        middleware_class=CORSMiddleware,
-        allow_origins=CORS_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+class PiServer:
+
+    CORS_ORIGINS = [
+        "http://localhost",
+        "http://localhost:3308",
+        "http://127.0.0.1",
+        "http://127.0.0.1:3308",
+        "http://[::1]",
+        "http://[::1]:3308",
+    ]
+    STATIC_DIR = str(object=_CURRENT_DIR.parent / "front_end" / "static")
+
+    TEMPLATES = Jinja2Templates(
+        directory=str(object=_CURRENT_DIR.parent / "front_end" / "templates")
     )
-    app.mount(path="/static", app=StaticFiles(directory=STATIC_DIR), name="static")
 
-    @app.middleware(middleware_type="http")
-    async def add_csp_header(request: Request, call_next):
-        response: Response = await call_next(request)
-        response.headers["Content-Security-Policy"] = CSP_POLICY
-        return response
+    @staticmethod
+    def create_app(dev: bool = False) -> FastAPI:
+        """Create a new FastAPI app.
 
-    @app.get("/", response_class=HTMLResponse)
-    async def read_root(request: Request):
-        return TEMPLATES.TemplateResponse(
-            name="base.html", context={"request": request}
+        Args:
+            dev (bool, optional): Optional flag to enable development features. Defaults to False.
+
+        Returns:
+            FastAPI: The created FastAPI app instance.
+
+        Note:
+            In development mode, the app includes hot-reloading capabilities for the frontend.
+            This requires extra dependencies and should only be used during development.
+            Specifically, `Node.js` with `npm`, `tailwindcss`, and `nodemon` are required.
+            If node is already installed, ensure the dependencies are installed by navigating to
+            `src/safe_pc/proxmox_auto_installer/front_end/tailwindcss` and running `npm install -D`.
+
+
+        Usage:
+        ```python
+            # Programmatically
+            from safe_pc.proxmox_auto_installer.back_end.server import PiServer
+            PiServer.run(dev=True)   # For development mode w/ hot-reloading
+            PiServer.run()           # For production mode
+
+            # As a module
+            # Note: `python` might be `python3` or `py` on some systems
+            python -m safe_pc.proxmox_auto_installer.back_end.server # production mode
+            python -m safe_pc.proxmox_auto_installer.back_end.server dev # development mode
+        ```
+        """
+        app = FastAPI()
+        app.add_middleware(
+            middleware_class=CORSMiddleware,
+            allow_origins=PiServer.CORS_ORIGINS,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+        app.mount(
+            path="/static",
+            app=StaticFiles(directory=PiServer.STATIC_DIR),
+            name="static",
         )
 
-    return app
+        PiRoutes.register_routes(app=app, templates=PiServer.TEMPLATES, dev=dev)
 
+        if dev:
+            DevHelpers.handle_dev_hot_reload(app=app, templates=PiServer.TEMPLATES)
 
-async def run_server():
+        return app
 
-    try:
-        config = Config(
-            port=3308,
-            reload=True,
-            factory=True,
-            log_level="info",
-            reload_dirs=[str(object=CURRENT_DIR.parent.parent)],
-            app="safe_pc.proxmox_auto_installer.back_end.server:create_app",
-        )
-        server = Server(config=config)
-        await server.serve()
-    except Exception as e:
-        if Exception == KeyboardInterrupt:
-            print("Server stopped by user")
-        else:
+    @staticmethod
+    def create_app_dev() -> FastAPI:
+        """Shorthand for creating a development-mode app.
+
+        Returns:
+            FastAPI: a FastAPI app with development features enabled.
+        """
+        return PiServer.create_app(dev=True)
+
+    @staticmethod
+    async def run(dev: bool = False):
+        """
+        Asynchronously starts the server with the specified configuration.
+        Args:
+            dev (bool, optional): If True, runs the server in development mode using the development app configuration.
+                If False, uses the main app configuration. Defaults to False.
+        Raises:
+            Exception: If an error occurs during server startup, prints the error and exits the process with code 1.
+        """
+
+        try:
+            config = Config(
+                app=(_DEV_MAIN if dev else _MAIN),
+                port=3308,
+                factory=True,
+                log_level="info",
+            )
+            server = Server(config=config)
+            await server.serve()
+        except Exception as e:
             print(f"Error starting server: {e}")
             exit(code=1)
 
 
+@handle_keyboard_interrupt
 def main():
-    run(main=run_server())
+    """
+    Entry point for the server application. Initializes and runs the PiServer.
+    """
+
+    run(main=PiServer.run())
 
 
+@handle_keyboard_interrupt
+def main_dev():
+    """
+    Entry point for running the server in development mode with hot-reloading.
+    """
+    run(main=PiServer.run(dev=True))
+
+
+# If running directly as a script, start the server
 if __name__ == "__main__":
-    main()
+
+    args = argv
+    if len(args) > 1 and args[1] == "dev":
+        main_dev()
+    else:
+        main()
