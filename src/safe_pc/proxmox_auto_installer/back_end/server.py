@@ -3,8 +3,6 @@ from pathlib import Path
 from sys import exit, argv
 from safe_pc.utils import handle_keyboard_interrupt
 from safe_pc.proxmox_auto_installer.back_end.routes import PiRoutes
-from safe_pc.proxmox_auto_installer.back_end.helpers import DevHelpers
-
 
 from uvicorn import Config, Server
 from fastapi import FastAPI
@@ -79,10 +77,8 @@ class PiServer:
             name="static",
         )
 
+        # attaches the CSP middleware and the routes
         PiRoutes.register_routes(app=app, templates=PiServer.TEMPLATES, dev=dev)
-
-        if dev:
-            DevHelpers.handle_dev_hot_reload(app=app, templates=PiServer.TEMPLATES)
 
         return app
 

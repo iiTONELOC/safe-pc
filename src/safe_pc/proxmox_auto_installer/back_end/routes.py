@@ -1,3 +1,4 @@
+from safe_pc.proxmox_auto_installer.back_end.helpers import DevHelpers
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -29,6 +30,7 @@ class PiRoutes:
         Side Effects:
             - Adds middleware to set Content-Security-Policy headers.
             - Registers the root endpoint ("/") to serve the main HTML page.
+            - In development mode, sets up hot-reloading functionality.
 
         Notes:
             The CSP policy is set to restrict resources to the same origin and allow images from
@@ -46,3 +48,6 @@ class PiRoutes:
             return templates.TemplateResponse(
                 name="base.html", context={"request": request}
             )
+
+        if dev:
+            DevHelpers.handle_dev_hot_reload(app=app, templates=templates)
