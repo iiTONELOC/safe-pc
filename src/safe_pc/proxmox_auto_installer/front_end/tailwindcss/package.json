@@ -1,0 +1,17 @@
+{
+  "name": "tailwindcss",
+  "version": "1.0.0",
+  "description": "Tailwindcss module for Proxmox Auto Installer",
+  "scripts": {
+    "build": "tailwindcss -i ./styles/app.css -o ../static/css/tailwind.css --minify",
+    "build:dev": "npx @tailwindcss/cli -i ./styles/app.css -o ../static/css/tailwind.css --watch"
+  },
+  "keywords": [],
+  "author": "Anthony Tropeano",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.13",
+    "tailwindcss": "^4.1.13"
+  }
+}

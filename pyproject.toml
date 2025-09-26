@@ -3,11 +3,14 @@ name = "safe-pc"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Your Name",email = "you@example.com"}
+    {name = "Anthony Tropeano",email = "anthonytropeano@me.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi[standard] (>=0.117.1,<0.118.0)",
+    "uvicorn (>=0.37.0,<0.38.0)"
+   
 ]
 
 [tool.poetry]
@@ -16,3 +19,7 @@ packages = [{include = "safe_pc", from = "src"}]
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+start = "safe_pc.proxmox_auto_installer.back_end.server:main"
+start-dev = "safe_pc.proxmox_auto_installer.scripts.run_dev:run_all"
