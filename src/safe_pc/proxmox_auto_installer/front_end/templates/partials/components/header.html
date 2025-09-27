@@ -1,0 +1,25 @@
+<header
+  id="header"
+  class="w-full p-6 flex items-center justify-between bg-transparent text-gray-100 relative"
+>
+  <!-- Logo + Title wrapper -->
+  <span
+    class="flex items-center gap-3 md:absolute md:left-1/2 md:transform md:-translate-x-1/2"
+  >
+    {% include "partials/svgs/logo.svg" %}
+    <h1
+      class="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-sky-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.3)]"
+    >
+      Safe-PC Maker
+    </h1>
+  </span>
+
+  <!-- Status (always right) -->
+  <div class="ml-auto flex">
+    {% include "partials/components/status.html" %}
+  </div>
+</header>
+
+{% block footer_scripts %}
+<script src="{{ url_for('static', path='/js/header-height.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,16 @@
+<!-- templates/layouts/dashboard.html -->
+{% extends "base.html" %} {% block title %}Dashboard | Safe-PC Maker{% endblock
+%} {% block body %}
+<div class="relative flex flex-col items-start justify-start w-screen">
+  {% include "partials/components/header.html" %}
+  <div
+    class="absolute inset-0 bg-[url('/static/images/circuit.png')] bg-center bg-repeat bg-fixed opacity-3.25 pointer-events-none z-0 w-full h-full"
+    aria-hidden="true"
+  ></div>
+  <!-- Main content -->
+  <div class="w-full z-50">
+    {% block content %}{% endblock %} {% include
+    "partials/components/footer.html" %}
+  </div>
+</div>
+{% endblock %}

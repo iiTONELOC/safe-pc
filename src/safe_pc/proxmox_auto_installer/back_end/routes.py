@@ -1,3 +1,4 @@
+from datetime import datetime
 from safe_pc.proxmox_auto_installer.back_end.helpers import DevHelpers
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -5,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 
 
 class PiRoutes:
+    START_YEAR = 2025
     CSP_POLICY = (
         "default-src 'self'; "
         "connect-src 'self'; "
@@ -12,6 +14,7 @@ class PiRoutes:
         "style-src 'self'; "
         "img-src 'self' data:; "
     )
+    CURRENT_YEAR = datetime.now().year
 
     @staticmethod
     def register_routes(
@@ -46,7 +49,12 @@ class PiRoutes:
         @app.get(path="/", response_class=HTMLResponse)
         async def read_root(request: Request):
             return templates.TemplateResponse(
-                name="base.html", context={"request": request}
+                name="/pages/main/index.html",
+                context={
+                    "request": request,
+                    "start_year": PiRoutes.START_YEAR,
+                    "current_year": PiRoutes.CURRENT_YEAR,
+                },
             )
 
         if dev:

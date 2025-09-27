@@ -1,0 +1,12 @@
+{% extends "layouts/main.html" %} {% block title %}Installer | Safe-PC Maker{%
+endblock %} {% block content %}
+<div
+  class="flex flex-col items-center justify-center min-h-[calc(100vh_-_var(--header-height)_-_58px)] z-10"
+>
+  {% include "partials/buttons/create-iso.html" %}
+  <!-- Placeholder for future modal -->
+  {% include "partials/modals/create-iso.html" %}
+</div>
+{% endblock %} {% block footer_scripts %}
+<script src="{{url_for('static', path='/js/prox-iso-installer.js')}}"></script>
+{% endblock %}
