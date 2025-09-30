@@ -1,11 +1,4 @@
-from safe_pc.proxmox_auto_installer.constants import (
-    PROXMOX_ALLOWED_KEYBOARDS,
-    PROXMOX_ALLOWED_FILESYSTEMS,
-    PROXMOX_ALLOWED_ZFS_RAID,
-    PROXMOX_ALLOWED_BTRFS_RAID,
-    PROXMOX_ALLOWED_FIRST_BOOT_SOURCES,
-    PROXMOX_ALLOWED_FIRST_BOOT_ORDERING,
-)
+from safe_pc.proxmox_auto_installer.constants import PROXMOX_ALLOWED_KEYBOARDS
 from safe_pc.proxmox_auto_installer.utils.tzd import ProxmoxTimezoneHelper
 from pydantic import BaseModel, Field, field_validator
 
@@ -23,18 +16,6 @@ class AnswerFileSection(BaseModel):
             "fqdn": "proxmox.lab.local",
             "mailto": "root@localhost",
             "root-password-hashed": hashed_password,
-        },
-        "network": {
-            "source": "from-answer",
-            "cidr": "10.0.4.254/24",
-            "gateway": "10.0.4.1",
-            "dns": "10.0.4.1",
-            "filter.ID_NET_NAME_MAC": f"*{mgmt_nic}".replace(":", ""),
-        },
-        "disk-setup": {
-            "filesystem": "zfs",
-            "zfs.raid": "raid0",
-            "disk-list": [f"{disk}"],
         },
 """
 
@@ -79,6 +60,7 @@ class GlobalConfig(BaseModel):
         description="Hashed root password for the Proxmox server",
         example="$6$rounds=656000$saltsalt$hashedpasswordhashhashhashhashhashhashhashhashhash",
         regex="^\\$6\\$rounds=\\d+\\$[./A-Za-z0-9]{8}\\$[./A-Za-z0-9]{86}$",
+        alias="root-password-hashed",
     )
 
     @field_validator("keyboard")
