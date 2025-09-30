@@ -5,19 +5,19 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 
-class PiRoutes:
-    START_YEAR = 2025
+class BaseRoutes:
+    START_YEAR = 2025  # Project start year for copyright
     CSP_POLICY = (
         "default-src 'self'; "
-        "connect-src 'self'; "
+        "connect-src 'self' wss://127.0.0.1:33008; "
         "script-src 'self'; "
         "style-src 'self'; "
         "img-src 'self' data:; "
     )
-    CURRENT_YEAR = datetime.now().year
+    CURRENT_YEAR = datetime.now().year  # Current year for copyright
 
     @staticmethod
-    def register_routes(
+    def register(
         app: FastAPI,
         templates: Jinja2Templates,
         dev: bool = False,
@@ -40,22 +40,25 @@ class PiRoutes:
             data URIs.
         """
 
+        # Middleware to add Content-Security-Policy headers, ensures this is attached first
         @app.middleware(middleware_type="http")
         async def csp_middleware(request: Request, call_next):
             response = await call_next(request)
-            response.headers["Content-Security-Policy"] = PiRoutes.CSP_POLICY
+            response.headers["Content-Security-Policy"] = BaseRoutes.CSP_POLICY
             return response
 
+        # Root endpoint serving the main page
         @app.get(path="/", response_class=HTMLResponse)
         async def read_root(request: Request):
             return templates.TemplateResponse(
                 name="/pages/main/index.html",
                 context={
                     "request": request,
-                    "start_year": PiRoutes.START_YEAR,
-                    "current_year": PiRoutes.CURRENT_YEAR,
+                    "start_year": BaseRoutes.START_YEAR,
+                    "current_year": BaseRoutes.CURRENT_YEAR,
                 },
             )
 
+        # Development mode features - hot-reloading, etc.
         if dev:
             DevHelpers.handle_dev_hot_reload(app=app, templates=templates)

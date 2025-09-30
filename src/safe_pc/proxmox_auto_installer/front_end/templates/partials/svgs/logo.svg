@@ -1,7 +1,7 @@
 <svg
   xmlns="http://www.w3.org/2000/svg"
   viewBox="0 0 24 24"
-  class="w-8 h-8 md:w-10 md:h-10 text-sky-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.4)] mt-1"
+  class="w-8 h-8 md:w-10 md:h-10 text-sky-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.4)] mt-"
   fill="none"
   stroke="currentColor"
   stroke-width="2"

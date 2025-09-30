@@ -5,7 +5,7 @@ This script runs the A development server with live-reloading using nodemon.
 from pathlib import Path
 from sys import platform, exit
 from subprocess import run, CalledProcessError
-from safe_pc.utils import handle_keyboard_interrupt
+from safe_pc.utils.utils import handle_keyboard_interrupt
 
 
 @handle_keyboard_interrupt

@@ -1,8 +1,11 @@
 from asyncio import run
 from pathlib import Path
 from sys import exit, argv
-from safe_pc.utils import handle_keyboard_interrupt
-from safe_pc.proxmox_auto_installer.back_end.routes import PiRoutes
+
+from safe_pc.utils.utils import handle_keyboard_interrupt
+from safe_pc.utils.crypto.temp_key_file import TempKeyFile
+from safe_pc.utils.crypto.dpapi import read_dpapi_protected_key
+from safe_pc.proxmox_auto_installer.back_end.routes.routes import PiRoutes
 
 from uvicorn import Config, Server
 from fastapi import FastAPI
@@ -10,21 +13,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 
-
 _CURRENT_DIR = Path(__file__).resolve().parent
 _MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app"
 _DEV_MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app_dev"
 
 
 class PiServer:
-
     CORS_ORIGINS = [
-        "http://localhost",
-        "http://localhost:3308",
         "http://127.0.0.1",
-        "http://127.0.0.1:3308",
-        "http://[::1]",
-        "http://[::1]:3308",
+        "http://127.0.0.1:33008",
     ]
     STATIC_DIR = str(object=_CURRENT_DIR.parent / "front_end" / "static")
 
@@ -78,7 +75,7 @@ class PiServer:
         )
 
         # attaches the CSP middleware and the routes
-        PiRoutes.register_routes(app=app, templates=PiServer.TEMPLATES, dev=dev)
+        PiRoutes.register(app=app, templates=PiServer.TEMPLATES, dev=dev)
 
         return app
 
@@ -101,19 +98,22 @@ class PiServer:
         Raises:
             Exception: If an error occurs during server startup, prints the error and exits the process with code 1.
         """
-
-        try:
-            config = Config(
-                app=(_DEV_MAIN if dev else _MAIN),
-                port=3308,
-                factory=True,
-                log_level="info",
-            )
-            server = Server(config=config)
-            await server.serve()
-        except Exception as e:
-            print(f"Error starting server: {e}")
-            exit(code=1)
+        cert_dir = Path(__file__).resolve().parents[4] / "certs"
+        with TempKeyFile(read_dpapi_protected_key(cert_dir / "key.pem")) as key_path:
+            try:
+                config = Config(
+                    app=(_DEV_MAIN if dev else _MAIN),
+                    port=33008,
+                    factory=True,
+                    log_level="info",
+                    ssl_keyfile=str(object=key_path),
+                    ssl_certfile=str(object=cert_dir / "cert.pem"),
+                )
+                server = Server(config=config)
+                await server.serve()
+            except Exception as e:
+                print(f"Error starting server: {e}")
+                exit(code=1)
 
 
 @handle_keyboard_interrupt

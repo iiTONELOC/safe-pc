@@ -1,3 +1,6 @@
+from os import getenv
+
+
 def handle_keyboard_interrupt(func):
     """Decorator to handle KeyboardInterrupt exceptions gracefully.
 
@@ -24,3 +27,21 @@ def handle_keyboard_interrupt(func):
             exit(0)
 
     return wrapper
+
+
+def IS_TESTING() -> bool:
+    """Check if the code is running in a testing environment.
+
+    Returns:
+        bool: True if running tests, False otherwise.
+    """
+    return getenv("CAPSTONE_TESTING", "0") == "1"
+
+
+def IS_VERBOSE() -> bool:
+    """Check if verbose mode is enabled via command-line arguments.
+
+    Returns:
+        bool: True if verbose mode is enabled, False otherwise.
+    """
+    return getenv("CAPSTONE_VERBOSE", "0") == "1"

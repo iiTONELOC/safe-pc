@@ -1,17 +1,22 @@
-from fastapi import FastAPI, Response, WebSocket
+from asyncio import timeout
 from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
+
+
+async def _send_safe(ws: WebSocket, msg: str):
+    try:
+        async with timeout(1.0):
+            await ws.send_text(msg)
+        return True
+    except Exception:
+        return False
 
 
 async def _trigger_reload(clients: set[WebSocket]):
-    """Send 'reload' to all connected WebSocket clients"""
-    disconnected = []
     for ws in clients:
-        try:
-            await ws.send_text(data="reload")
-        except Exception:
-            disconnected.append(ws)
-    for ws in disconnected:
-        clients.discard(ws)
+        ok = await _send_safe(ws, "reload")
+        if not ok:
+            clients.discard(ws)
 
 
 # Used in development mode to handle hot-reloading of the frontend
@@ -42,14 +47,16 @@ class DevHelpers:
 
         templates.env.globals["DEV"] = True  # Mark templates as in dev mode
 
-        @app.websocket("/reload-ws")
+        @app.websocket(
+            "/reload-ws", name="WebSocket for hot-reloading in development mode"
+        )
         async def reload_ws(ws: WebSocket):
             await ws.accept()
             DevHelpers.reload_clients.add(ws)
             try:
                 while True:
                     await ws.receive_text()
-            except Exception:
+            except WebSocketDisconnect:
                 pass
             finally:
                 DevHelpers.reload_clients.remove(ws)
