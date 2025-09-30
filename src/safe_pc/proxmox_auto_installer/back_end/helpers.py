@@ -41,7 +41,7 @@ class DevHelpers:
             - Manages a set of connected WebSocket clients for reload notifications.
 
         Notes:
-            The frontend ws logic is in `static/js/hot-reload.js`. Very basic script that connects to the ws
+            The frontend ws logic is in `static/js/utils/hot-reload.js`. Very basic script that connects to the ws
             and listens for "reload" messages, upon which it reloads the page.
         """
 
