@@ -1,0 +1,244 @@
+Albania : AL
+Andorra : AD
+Aruba : AW
+French Southern Territories : TF
+Angola : AO
+Åland Islands : AX
+Argentina : AR
+Afghanistan : AF
+American Samoa : AS
+United Arab Emirates : AE
+Armenia : AM
+Australia : AU
+Antigua and Barbuda : AG
+Anguilla : AI
+Austria : AT
+Bahamas : BS
+Brazil : BR
+Burkina Faso : BF
+Burundi : BI
+Bonaire, Sint Eustatius and Saba : BQ
+Bangladesh : BD
+Bulgaria : BG
+Azerbaijan : AZ
+Belgium : BE
+Bosnia and Herzegovina : BA
+Belize : BZ
+Barbados : BB
+Bermuda : BM
+Benin : BJ
+Bolivia, Plurinational State of : BO
+Bahrain : BH
+Brunei Darussalam : BN
+Bouvet Island : BV
+Saint Barthélemy : BL
+Belarus : BY
+Central African Republic : CF
+Canada : CA
+Cameroon : CM
+Botswana : BW
+Congo, The Democratic Republic of the : CD
+Cocos (Keeling) Islands : CC
+China : CN
+Congo : CG
+Switzerland : CH
+Côte d'Ivoire : CI
+Chile : CL
+Cook Islands : CK
+Cabo Verde : CV
+Costa Rica : CR
+Comoros : KM
+Cuba : CU
+Curaçao : CW
+Cayman Islands : KY
+Cyprus : CY
+Czechia : CZ
+Germany : DE
+Dominica : DM
+Djibouti : DJ
+Denmark : DK
+Dominican Republic : DO
+Algeria : DZ
+Ecuador : EC
+Estonia : EE
+Egypt : EG
+Western Sahara : EH
+Eritrea : ER
+Spain : ES
+Ethiopia : ET
+Finland : FI
+Fiji : FJ
+Faroe Islands : FO
+France : FR
+Falkland Islands (Malvinas) : FK
+Micronesia, Federated States of : FM
+Gabon : GA
+United Kingdom : GB
+Greece : GR
+Guatemala : GT
+Georgia : GE
+Guernsey : GG
+Ghana : GH
+Grenada : GD
+Guadeloupe : GP
+Gibraltar : GI
+Guinea : GN
+Guinea-Bissau : GW
+Equatorial Guinea : GQ
+Singapore : SG
+Greenland : GL
+French Guiana : GF
+Gambia : GM
+Guam : GU
+Guyana : GY
+Heard Island and McDonald Islands : HM
+Honduras : HN
+Croatia : HR
+Haiti : HT
+Hungary : HU
+British Indian Ocean Territory : IO
+Iceland : IS
+Indonesia : ID
+Isle of Man : IM
+India : IN
+Iran, Islamic Republic of : IR
+Ireland : IE
+Iraq : IQ
+Israel : IL
+Italy : IT
+Jamaica : JM
+Jersey : JE
+Jordan : JO
+Japan : JP
+Kazakhstan : KZ
+Kenya : KE
+Kyrgyzstan : KG
+Cambodia : KH
+Colombia : CO
+Kiribati : KI
+Puerto Rico : PR
+Saint Kitts and Nevis : KN
+Korea, Republic of : KR
+Kuwait : KW
+Christmas Island : CX
+Lao People's Democratic Republic : LA
+Lebanon : LB
+Libya : LY
+Saint Lucia : LC
+Liechtenstein : LI
+Sri Lanka : LK
+Lesotho : LS
+Lithuania : LT
+Luxembourg : LU
+Liberia : LR
+Saint Martin (French part) : MF
+Morocco : MA
+Monaco : MC
+Myanmar : MM
+Macao : MO
+Moldova, Republic of : MD
+Mexico : MX
+Marshall Islands : MH
+North Macedonia : MK
+Malta : MT
+Montenegro : ME
+Latvia : LV
+Mongolia : MN
+Montserrat : MS
+Mozambique : MZ
+Mauritania : MR
+Mali : ML
+Martinique : MQ
+Madagascar : MG
+Mauritius : MU
+Maldives : MV
+Malawi : MW
+Northern Mariana Islands : MP
+Mayotte : YT
+Namibia : NA
+New Caledonia : NC
+Niger : NE
+Norfolk Island : NF
+Nigeria : NG
+Nicaragua : NI
+Netherlands : NL
+Norway : NO
+Nepal : NP
+Nauru : NR
+Niue : NU
+New Zealand : NZ
+Oman : OM
+Pakistan : PK
+Pitcairn : PN
+Palestine, State of : PS
+Palau : PW
+Peru : PE
+Papua New Guinea : PG
+Paraguay : PY
+Korea, Democratic People's Republic of : KP
+Philippines : PH
+Poland : PL
+Portugal : PT
+French Polynesia : PF
+Qatar : QA
+Réunion : RE
+Saint Pierre and Miquelon : PM
+Romania : RO
+Russian Federation : RU
+Rwanda : RW
+Svalbard and Jan Mayen : SJ
+Sint Maarten (Dutch part) : SX
+Saudi Arabia : SA
+Slovenia : SI
+Senegal : SN
+South Georgia and the South Sandwich Islands : GS
+Slovakia : SK
+Saint Helena, Ascension and Tristan da Cunha : SH
+Suriname : SR
+Solomon Islands : SB
+El Salvador : SV
+Sudan : SD
+San Marino : SM
+Sao Tome and Principe : ST
+Serbia : RS
+South Sudan : SS
+Sierra Leone : SL
+Eswatini : SZ
+Seychelles : SC
+Sweden : SE
+Syrian Arab Republic : SY
+Turks and Caicos Islands : TC
+Antarctica : AQ
+Chad : TD
+Togo : TG
+Thailand : TH
+Tajikistan : TJ
+Turkmenistan : TM
+Tokelau : TK
+Trinidad and Tobago : TT
+Timor-Leste : TL
+Tunisia : TN
+Tonga : TO
+Türkiye : TR
+Tuvalu : TV
+Taiwan, Province of China : TW
+Uganda : UG
+Tanzania, United Republic of : TZ
+Ukraine : UA
+Uruguay : UY
+United States : US
+Uzbekistan : UZ
+Holy See (Vatican City State) : VA
+Saint Vincent and the Grenadines : VC
+Venezuela, Bolivarian Republic of : VE
+Virgin Islands, British : VG
+Virgin Islands, U.S. : VI
+Viet Nam : VN
+Vanuatu : VU
+Wallis and Futuna : WF
+Samoa : WS
+Malaysia : MY
+Yemen : YE
+South Africa : ZA
+Zambia : ZM
+Zimbabwe : ZW

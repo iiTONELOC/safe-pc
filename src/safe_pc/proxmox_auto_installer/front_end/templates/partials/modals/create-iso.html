@@ -1,18 +1,236 @@
 <div
   id="create-iso-modal"
-  class="hidden fixed inset-0 bg-black/90 items-center justify-center z-50 p-8"
+  class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-8"
 >
   <div
-    class="bg-gray-900 p-8 rounded-2xl shadow-xl max-w-lg w-full text-center border border-sky-400/30"
+    class="modal-content bg-gray-900 p-8 rounded-2xl shadow-xl max-w-2xl w-full border border-sky-400/30 h-auto max-h-[90vh] overflow-y-auto"
   >
-    <h2 class="text-2xl font-bold text-sky-400">Proxmox Settings</h2>
-    <p class="my-2">
-      Would you like to use the default settings or customize the installer?
-    </p>
-    <button
-      class="mt-6 px-6 py-2 bg-sky-500 border border-sky-600 text-slate-900 font-bold rounded-xl hover:bg-sky-400 hover:scale-105 cursor-pointer transition-transform duration-200 shadow-lg"
+    <h2 class="text-2xl font-bold text-sky-400 text-center">
+      Proxmox Installer Settings
+    </h2>
+
+    <form
+      id="proxmox-settings-form"
+      class="w-full mt-6 flex flex-col gap-6 text-left"
     >
-      Close
-    </button>
+      <!-- Global Options -->
+      <fieldset class="bg-black/40 p-4 rounded-xl border border-sky-500/20">
+        <legend class="px-2 text-sky-400 font-semibold">Global Options</legend>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+          <div>
+            <label for="keyboard" class="block text-sm font-medium">
+              Keyboard Layout <span class="text-red-500">*</span>
+            </label>
+            <select
+              id="keyboard"
+              required
+              name="keyboard"
+              class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
+            >
+              <!-- options fetched from server-side -->
+            </select>
+          </div>
+          <div>
+            <label for="country" class="block text-sm font-medium">
+              Country <span class="text-red-500">*</span>
+            </label>
+            <select
+              id="country"
+              required
+              name="country"
+              class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
+            ></select>
+          </div>
+          <div>
+            <label for="timezone" class="block text-sm font-medium">
+              Timezone <span class="text-red-500">*</span>
+            </label>
+            <select
+              id="timezone"
+              required
+              name="timezone"
+              class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
+            ></select>
+          </div>
+          <div>
+            <label for="fqdn" class="block text-sm font-medium"
+              >FQDN
+              <span
+                id="fqdn-error"
+                class="text-red-500 text-sm tracking-tight truncate"
+              ></span
+            ></label>
+            <input
+              type="text"
+              id="fqdn"
+              name="fqdn"
+              placeholder="proxmox.lab.local"
+              data-default-value="proxmox.lab.local"
+              required
+              title="Enter a valid FQDN (e.g., proxmox.lab.local)"
+              class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 mt-4">
+          <div>
+            <label for="mailto" class="block text-sm font-medium">
+              Notification Email
+              <span
+                id="mailto-error"
+                class="text-red-500 text-sm tracking-tight truncate"
+              ></span>
+            </label>
+            <input
+              type="email"
+              id="mailto"
+              name="mailto"
+              required
+              placeholder="root@localhost"
+              data-default-value="root@localhost"
+              title="Enter a valid email address"
+              class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 mb-2">
+          <div class="relative">
+            <label for="root-password" class="block text-sm font-medium">
+              Root Password <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="password"
+              required
+              id="root-password"
+              name="root-password-hashed"
+              class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
+            />
+            <span
+              id="password-error"
+              class="absolute left-0 top-full mt-1 text-red-500 text-sm tracking-tight"
+            ></span>
+          </div>
+
+          <div class="relative">
+            <label for="confirm-password" class="block text-sm font-medium">
+              Confirm Password <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="password"
+              required
+              id="confirm-password"
+              name="confirm-password"
+              class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
+            />
+            <span
+              id="password-confirm-error"
+              class="absolute left-0 top-full mt-1 text-red-500 text-sm tracking-tight"
+            ></span>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Network Options -->
+      <fieldset class="bg-black/40 p-4 rounded-xl border border-sky-500/20">
+        <legend class="px-2 text-sky-400 font-semibold">Network Options</legend>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+          <div>
+            <label for="source" class="block text-sm font-medium">
+              Source <span class="text-red-500">*</span>
+            </label>
+            <select
+              id="source"
+              name="source"
+              required
+              class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
+            >
+              <option value="from-answer">From Answer</option>
+              <option value="from-dhcp">From DHCP</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="cidr" class="block text-sm font-medium">
+              CIDR <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="cidr"
+              name="cidr"
+              data-default-value="10.0.4.238/24"
+              placeholder="10.0.4.238/24"
+              required
+              title="Enter a valid IPv4 address with CIDR (e.g., 192.168.0.1/24)"
+              class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
+            />
+            <span
+              id="cidr-error"
+              class="block min-h-[1.25rem] text-red-500 text-sm tracking-tight mt-1"
+            ></span>
+          </div>
+
+          <div>
+            <label for="gateway" class="block text-sm font-medium">
+              Gateway <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="gateway"
+              name="gateway"
+              placeholder="10.0.4.1"
+              data-default-value="10.0.4.1"
+              required
+              title="Enter a valid IPv4 address"
+              class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
+            />
+            <span
+              id="gateway-error"
+              class="block min-h-[1.25rem] text-red-500 text-sm tracking-tight mt-1"
+            ></span>
+          </div>
+
+          <div>
+            <label for="dns" class="block text-sm font-medium">
+              DNS <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="dns"
+              name="dns"
+              placeholder="10.0.4.1, 9.9.9.9"
+              data-default-value="10.0.4.1"
+              required
+              title="Enter one or more IPv4 addresses separated by commas"
+              class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
+            />
+            <span
+              id="dns-error"
+              class="block min-h-[1.25rem] text-red-500 text-sm tracking-tight mt-1"
+            ></span>
+          </div>
+        </div>
+      </fieldset>
+    </form>
+
+    <!-- Modal Controls -->
+    <div class="flex justify-end gap-4 mt-6">
+      <button
+        id="close-create-iso-modal"
+        type="button"
+        class="px-6 py-2 bg-gray-700 border border-gray-600 text-gray-200 font-medium rounded-xl hover:bg-gray-600 hover:scale-105 cursor-pointer transition-transform duration-200 shadow-md"
+      >
+        Cancel
+      </button>
+      <button
+        id="submit-btn"
+        type="submit"
+        form="proxmox-settings-form"
+        class="px-6 py-2 bg-sky-500 border border-sky-600 text-slate-900 font-bold rounded-xl hover:bg-sky-400 hover:scale-105 cursor-pointer transition-transform duration-200 shadow-lg"
+      >
+        Save
+      </button>
+    </div>
   </div>
 </div>

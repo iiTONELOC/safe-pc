@@ -20,8 +20,8 @@ _DEV_MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app_
 
 class PiServer:
     CORS_ORIGINS = [
-        "http://127.0.0.1",
-        "http://127.0.0.1:33008",
+        "https://127.0.0.1",
+        "https://127.0.0.1:33008",
     ]
     STATIC_DIR = str(object=_CURRENT_DIR.parent / "front_end" / "static")
 

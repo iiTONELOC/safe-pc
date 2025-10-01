@@ -1,2 +1,22 @@
 @import "tailwindcss";
 @source "../../templates";
+
+._disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+/* style scroll bars */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+background-color: #0ea5e9;
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+background-color: #38bdf8;
+}
+*::-webkit-scrollbar-track {
+background-color: #111827;
+}
+

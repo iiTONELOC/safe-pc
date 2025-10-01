@@ -1,6 +1,10 @@
+import json
+import urllib.request as requests
 from pathlib import Path
 from locale import getlocale
 
+
+from safe_pc.proxmox_auto_installer.utils.country_codes import _get_country_codes
 
 TZ_FILE = Path(__file__).parent / "tzs.txt"
 
@@ -31,70 +35,45 @@ class ProxmoxTimezoneHelper:
         self._ensure_initialized()
         return self._timezones
 
-    def get_local_timezone(self) -> str:
-        """Attempt to determine the local timezone based on the system locale.
+    def get_local_country_code(self) -> str:
+        """Attempt to determine the local country code based on the system locale.
 
         Returns:
-            str: The detected timezone string, or "America/New_York" if detection fails.
+            str: The detected country code, or "US" if detection fails.
         """
         self._ensure_initialized()
         loc = getlocale()
+        codes = _get_country_codes()
         if loc and loc[0]:
             country_code = loc[0].split("_")[-1]
-            for tz in self._timezones:
-                if tz.endswith(f"/{country_code}"):
+            return codes.get(country_code, "US")
+
+        return "US"
+
+    def get_local_timezone(self) -> str:
+        """
+        Determines and returns the local timezone as a string.
+        Attempts to retrieve the timezone using an external IP-based API. If successful,
+        caches and returns the timezone. If the API call fails or no timezone is found,
+        defaults to "UTC".
+        Returns:
+            str: The local timezone string, or "UTC" if detection fails.
+
+        """
+
+        if hasattr(self, "_local_timezone"):
+            return self._local_timezone
+        try:
+            with requests.urlopen("https://ipapi.co/timezone", timeout=5) as resp:
+                tz = resp.read().decode().strip()
+                if tz:
+                    self._local_timezone = tz
                     return tz
-        return "America/New_York"
-
-    def regional(self, partial: str) -> list[str]:
-        """Get a list of timezones that start with the same region as the provided timezone.
-
-        Args:
-            partial (str): A timezone string like 'America/New_York'.
-
-        Returns:
-            list[str]: List of timezones in the same region.
-        """
-        self._ensure_initialized()
-        print(self._timezones)
-        print(f"Finding timezones similar to: {partial}")
-        if "/" in partial:
-            region = partial.split("/")[0].strip()
-            print(f"Finding timezones similar to region: {region}")
-            return [tz for tz in self._timezones if tz.startswith(f"{region}")]
-        return []
-
-    def get_tz_indexes(self, tz: str) -> list[int]:
-        """Get the indexes of a timezone in the timezone list.
-
-        Args:
-            tz (str): The timezone string to find.
-
-        Returns:
-            list[int]: List of indexes where the timezone is found.
-        """
-        self._ensure_initialized()
-        return [i for i, t in enumerate(self._timezones) if t == tz]
-
-    def get_surrounding_tz_indexes(self, tz: str, range_size: int = 2) -> list[int]:
-        """Get the indexes of timezones surrounding a given timezone.
-
-        Args:
-            tz (str): The timezone string to find.
-            range_size (int, optional): Number of surrounding indexes to include on each side. Defaults to 2.
-
-        Returns:
-            list[int]: List of surrounding indexes.
-        """
-        self._ensure_initialized()
-        indexes = self.get_tz_indexes(tz)
-        surrounding_indexes = set()
-        for index in indexes:
-            start = max(0, index - range_size)
-            end = min(len(self._timezones), index + range_size + 1)
-            surrounding_indexes.update(range(start, end))
-        return sorted(surrounding_indexes)
+        except Exception:
+            pass
+        self._local_timezone = "UTC"
+        return "UTC"  # last fallback
 
     def _ensure_initialized(self):
         if self._timezones is None:
-            self._timezones = get_timezones()
+            self._timezones = self.get_timezones()
