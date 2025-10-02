@@ -1,4 +1,9 @@
 import {
+  populateTzSelect,
+  populateCountrySelect,
+  populateKeyboardSelect,
+} from "./helpers.js";
+import {
   validateDns,
   validateCidr,
   validateFQDN,
@@ -8,76 +13,55 @@ import {
   confirmPasswordValidator,
   handleSubmitBtnDisabledState,
 } from "./validators.js";
-import { fetchInstallerData, handleCreateIso } from "../api.js";
-
-import { show, hide, disableSubmitButton } from "../utils/dom.js";
+import { formElements } from "./formElements.js";
 import { hashPassword } from "../utils/crypto.js";
+import { formState, passwordValidated } from "./formState.js";
+import { fetchInstallerData, handleCreateIso } from "../api.js";
+import { show, hide, disableSubmitButton } from "../utils/dom.js";
 
-const passwordValidated = {
-  isPasswordValid: false,
-  isPasswordConfirmed: false,
-};
+// start fetching installer data immediately don't wait for DOMContentLoaded
+const installerData = fetchInstallerData().catch((error) => {
+  console.error("Error fetching installer data:", error);
+  return { installerSettings: {} };
+});
 
-const formState = {
-  global: {
-    fqdn: null,
-    email: null,
-    country: null,
-    timezone: null,
-    rootPassword: null,
-    keyboardLayout: null,
-  },
-  network: {
-    dns: null,
-    cidr: null,
-    source: null,
-    gateway: null,
-  },
-};
-
-document.addEventListener("DOMContentLoaded", async function () {
-  const { installerSettings } = await fetchInstallerData();
+// wait for the DOM to be ready
+document.addEventListener("DOMContentLoaded", async () => {
+  // wait for installer data to be fetched
+  const { installerSettings } = await installerData;
   const { countries, keyboards, timezones, currentCountry, currentTimezone } =
     installerSettings;
 
-  // general elements
+  // get the form elements
+  const {
+    dns,
+    cidr,
+    form,
+    modal,
+    content,
+    gateway,
+    closeBtn,
+    dnsError,
+    cidrError,
+    fqdnError,
+    fqdnInput,
+    submitBtn,
+    emailInput,
+    emailError,
+    createIsoBtn,
+    sourceSelect,
+    gatewayError,
+    passwordError,
+    passwordInput,
+    countrySelect,
+    keyboardSelect,
+    timezoneSelect,
+    loadingSpinner,
+    passwordConfirmInput,
+    passwordConfirmError,
+  } = formElements();
 
-  const btn = document.getElementById("create-iso-btn");
-  const submitBtn = document.getElementById("submit-btn");
-  const modal = document.getElementById("create-iso-modal");
-  const content = modal.querySelector(".modal-content");
-  const form = document.getElementById("proxmox-settings-form");
-  const closeBtn = document.getElementById("close-create-iso-modal");
-  const loadingSpinner = document.getElementById("loading-spinner");
-
-  //input fields
-  const fqdnInput = document.getElementById("fqdn");
-  const emailInput = document.getElementById("mailto");
-  const passwordInput = document.getElementById("root-password");
-  const passwordConfirmInput = document.getElementById("confirm-password");
-
-  // error spans
-  const fqdnError = document.getElementById("fqdn-error");
-  const emailError = document.getElementById("mailto-error");
-  const passwordError = document.getElementById("password-error");
-  const passwordConfirmError = document.getElementById(
-    "password-confirm-error"
-  );
-  const dnsError = document.getElementById("dns-error");
-  const cidrError = document.getElementById("cidr-error");
-  const gatewayError = document.getElementById("gateway-error");
-
-  // selects
-  const countrySelect = document.getElementById("country");
-  const keyboardSelect = document.getElementById("keyboard");
-  const timezoneSelect = document.getElementById("timezone");
-  // network fields
-  const dns = document.getElementById("dns");
-  const cidr = document.getElementById("cidr");
-  const gateway = document.getElementById("gateway");
-  const sourceSelect = document.getElementById("source");
-
-  // set default values from data attributes - these are hardcoded in the HTML and are not dynamic
+  // set default values from data attributes - these are hardcoded in the HTML
   [cidr, gateway, dns, fqdnInput, emailInput].forEach((field) => {
     const defaultValue = field.getAttribute("data-default-value");
     if (defaultValue) {
@@ -85,59 +69,24 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   });
 
-  // Populate country select
-  Object.entries(countries).forEach(([code, name]) => {
-    const option = document.createElement("option");
-    option.value = name;
-    option.textContent = code;
-
-    if (name === currentCountry) {
-      option.selected = true;
-    }
-    countrySelect.appendChild(option);
-  });
-
-  // Populate keyboard select
-  keyboards.forEach((keyboard) => {
-    const option = document.createElement("option");
-
-    option.value = keyboard;
-    option.textContent = keyboard.toUpperCase();
-    keyboardSelect.appendChild(option);
-
-    // Normalize both values for comparison
-    const normalizedKeyboard = keyboard.trim().toLowerCase();
-    const normalizedNavigatorLang = navigator.language.trim().toLowerCase();
-
-    if (normalizedKeyboard === normalizedNavigatorLang) {
-      option.selected = true;
-    }
-  });
-
-  // Populate timezone select
-  timezones.forEach((tz) => {
-    const option = document.createElement("option");
-    option.value = tz;
-    option.textContent = tz;
-    if (tz === currentTimezone) {
-      option.selected = true;
-    }
-    timezoneSelect.appendChild(option);
-  });
+  // populate the selects using the fetched data
+  populateKeyboardSelect(keyboards, keyboardSelect);
+  populateTzSelect(timezones, timezoneSelect, currentTimezone);
+  populateCountrySelect(countries, countrySelect, currentCountry);
 
   // Initialize formState with default values
-  formState.network.source = sourceSelect.value;
-  formState.network.cidr = cidr.value || null;
-  formState.network.gateway = gateway.value || null;
   formState.network.dns = dns.value || null;
+  formState.network.cidr = cidr.value || null;
+  formState.network.source = sourceSelect.value;
+  formState.network.gateway = gateway.value || null;
+  formState.global.rootPassword = null;
   formState.global.fqdn = fqdnInput.value || null;
   formState.global.email = emailInput.value || null;
   formState.global.country = countrySelect.value || null;
   formState.global.timezone = timezoneSelect.value || null;
   formState.global.keyboardLayout = keyboardSelect.value || null;
-  formState.global.rootPassword = null;
 
-  // event listeners for validation
+  // attach event listeners to form elements to handle validation and state updates
   for (const event of ["input", "change"]) {
     // FQDN validation
     fqdnInput.addEventListener(event, () =>
@@ -187,8 +136,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
-  // watch for changes to source select
+  // watch for changes to source select - enable/disable relevant fields
   sourceSelect.addEventListener("change", (_) => {
+    // fields are only needed if sourcing from answer file
     const required = sourceSelect.value === "from-answer";
 
     [cidr, gateway, dns].forEach((field) => {
@@ -216,7 +166,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   handleSubmitBtnDisabledState(submitBtn, passwordValidated);
 
   // open modal
-  btn.addEventListener("click", () => show(modal));
+  createIsoBtn.addEventListener("click", () => show(modal));
 
   // close modal
   closeBtn.addEventListener("click", (e) => {
@@ -252,7 +202,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     disableSubmitButton(submitBtn);
     // display loading spinner
     show(loadingSpinner);
-
+    // hash the password and store in form state
+    formState.global.rootPassword = await hashPassword(
+      passwordInput.value.trim()
+    );
+    // submit the form
+    console.log("Submitting form with state:", formState);
     const result = await handleCreateIso(formState);
     //TODO: handle errors - currently this api isn't expected to fail as its not implemented yet
     // hide the spinner
