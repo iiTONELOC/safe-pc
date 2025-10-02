@@ -1,4 +1,5 @@
 import { passwordHasEnoughEntropy } from "../utils/entropy.js";
+import { disableSubmitButton, enableSubmitButton } from "../utils/dom.js";
 
 export const validateFQDN = (fqdnElement, errorEl, formState) => {
   const fqdn = fqdnElement.value.trim();
@@ -21,44 +22,50 @@ export const validateFQDN = (fqdnElement, errorEl, formState) => {
   }
 };
 
-export const passwordValidator = ({
+export const passwordValidator = (
   passwordInput,
   passwordError,
   passwordConfirmError,
   passwordValidated,
-  formState,
-}) => {
-  if (passwordInput.value.length > 0 && passwordInput.value.length < 12) {
+  formState
+) => {
+  const value = passwordInput.value;
+  if (value.length > 0 && value.length < 12) {
     passwordError.textContent = "Password must be at least 12 characters long.";
     passwordConfirmError.textContent = "";
     passwordValidated.isPasswordConfirmed = false;
     passwordValidated.isPasswordValid = false;
-  } else if (
-    passwordInput.value.length > 12 &&
-    !passwordHasEnoughEntropy(passwordInput.value)
-  ) {
+    formState.global.rootPassword = null;
+  } else if (value.length >= 12 && !passwordHasEnoughEntropy(value)) {
     passwordError.textContent = "Low entropy password detected!";
     passwordConfirmError.textContent = "";
     passwordValidated.isPasswordConfirmed = false;
     passwordValidated.isPasswordValid = false;
     formState.global.rootPassword = null;
+  } else if (value.length === 0) {
+    passwordError.textContent = "";
+    passwordValidated.isPasswordValid = false;
+    formState.global.rootPassword = null;
   } else {
     passwordError.textContent = "";
     passwordValidated.isPasswordValid = true;
-    formState.global.rootPassword = passwordInput.value;
+    formState.global.rootPassword = value;
   }
 };
 
-export const confirmPasswordValidator = ({
+export const confirmPasswordValidator = (
   passwordInput,
   passwordConfirmInput,
   passwordConfirmError,
   passwordValidated,
-  formState,
-}) => {
+  formState
+) => {
   if (!passwordValidated.isPasswordValid) {
+    passwordValidated.isPasswordConfirmed = false;
+    formState.global.rootPassword = null;
     return;
-  } else if (passwordConfirmInput.value !== passwordInput.value) {
+  }
+  if (passwordConfirmInput.value !== passwordInput.value) {
     passwordConfirmError.textContent = "Passwords do not match!";
     passwordValidated.isPasswordConfirmed = false;
     formState.global.rootPassword = null;
@@ -202,4 +209,15 @@ export const validateGateway = (gatewayElement, errorEl, formState) => {
   formState.network.gateway = gateway;
   errorEl.textContent = "";
   return true;
+};
+
+export const handleSubmitBtnDisabledState = (submitBtn, passwordValidated) => {
+  if (
+    !passwordValidated.isPasswordValid ||
+    !passwordValidated.isPasswordConfirmed
+  ) {
+    disableSubmitButton(submitBtn);
+  } else {
+    enableSubmitButton(submitBtn);
+  }
 };

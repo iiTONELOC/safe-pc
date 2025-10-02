@@ -2,6 +2,7 @@ from asyncio import run
 from pathlib import Path
 from sys import exit, argv
 
+from safe_pc.proxmox_auto_installer.utils.jwt import is_jwt_valid, jwt_middleware
 from safe_pc.utils.utils import handle_keyboard_interrupt
 from safe_pc.utils.crypto.temp_key_file import TempKeyFile
 from safe_pc.utils.crypto.dpapi import read_dpapi_protected_key
@@ -9,9 +10,12 @@ from safe_pc.proxmox_auto_installer.back_end.routes.routes import PiRoutes
 
 from uvicorn import Config, Server
 from fastapi import FastAPI
+from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+
+load_dotenv()
 
 _CURRENT_DIR = Path(__file__).resolve().parent
 _MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app"
@@ -68,6 +72,9 @@ class PiServer:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+        # Add JWT-Middleware here, to be used in routes
+        app.middleware("http")(jwt_middleware)
         app.mount(
             path="/static",
             app=StaticFiles(directory=PiServer.STATIC_DIR),

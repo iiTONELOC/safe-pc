@@ -1,13 +1,15 @@
-from safe_pc.proxmox_auto_installer.constants import PROXMOX_ALLOWED_KEYBOARDS
-from safe_pc.proxmox_auto_installer.utils.tzd import ProxmoxTimezoneHelper
-from safe_pc.proxmox_auto_installer.utils.country_codes import ProxmoxCountryCodeHelper
-from fastapi import FastAPI
+from safe_pc.proxmox_auto_installer.back_end.routes.api.installer.data import (
+    installer_data,
+)
+from safe_pc.proxmox_auto_installer.back_end.routes.api.installer.iso import (
+    installer_iso,
+)
+
+from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 
 
 class APIRoutes:
-    tz_helper = ProxmoxTimezoneHelper()
-    cc_helper = ProxmoxCountryCodeHelper()
 
     @staticmethod
     def register(
@@ -16,23 +18,10 @@ class APIRoutes:
         dev: bool = False,
     ):
         # return a 200 hello work json response for testing
-        @app.get(path="/api/installer-data")
-        async def installer_data():
-            # need to grab some data for the front end
-            # we need our timezones, keyboard layouts, and list of countries
+        @app.get(path="/api/installer/data")
+        def installer_data_route():
+            return installer_data()
 
-            key_layouts = PROXMOX_ALLOWED_KEYBOARDS
-            tsz = APIRoutes.tz_helper.get_timezones()
-            ccd = APIRoutes.cc_helper.get_country_codes()
-            current_tz = APIRoutes.tz_helper.get_local_timezone()
-            current_country = APIRoutes.tz_helper.get_local_country_code()
-            print(f"CURRENT COUNTRY: {current_country}")
-            return {
-                "installerSettings": {
-                    "timezones": tsz,
-                    "keyboards": key_layouts,
-                    "countries": ccd,
-                    "currentTimezone": current_tz,
-                    "currentCountry": current_country,
-                }
-            }
+        @app.post(path="/api/installer/iso")
+        async def installer_iso_route(request: Request):
+            return await installer_iso(request)

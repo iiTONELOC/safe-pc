@@ -5,7 +5,7 @@ export const passwordHasEnoughEntropy = (password) => {
     digits: [/\d/, 10], // 0-9
     lowercase: [/[a-z]/, 26], // a-z
     uppercase: [/[A-Z]/, 26], // A-Z
-    special: [/[!@#$%^&*(),.?":{}|<>]/, 20], // special chars count (example)
+    special: [/[!@#$%^&*(),.?":{}|<>]/, 20], // special chars
   };
 
   let poolSize = 0;

@@ -22,8 +22,8 @@
               Keyboard Layout <span class="text-red-500">*</span>
             </label>
             <select
-              id="keyboard"
               required
+              id="keyboard"
               name="keyboard"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
             >
@@ -35,8 +35,8 @@
               Country <span class="text-red-500">*</span>
             </label>
             <select
-              id="country"
               required
+              id="country"
               name="country"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
             ></select>
@@ -46,8 +46,8 @@
               Timezone <span class="text-red-500">*</span>
             </label>
             <select
-              id="timezone"
               required
+              id="timezone"
               name="timezone"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
             ></select>
@@ -61,12 +61,12 @@
               ></span
             ></label>
             <input
-              type="text"
+              required
               id="fqdn"
+              type="text"
               name="fqdn"
               placeholder="proxmox.lab.local"
               data-default-value="proxmox.lab.local"
-              required
               title="Enter a valid FQDN (e.g., proxmox.lab.local)"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
             />
@@ -83,10 +83,11 @@
               ></span>
             </label>
             <input
-              type="email"
-              id="mailto"
-              name="mailto"
               required
+              id="mailto"
+              type="email"
+              name="mailto"
+              autocomplete="off"
               placeholder="root@localhost"
               data-default-value="root@localhost"
               title="Enter a valid email address"
@@ -101,9 +102,10 @@
               Root Password <span class="text-red-500">*</span>
             </label>
             <input
-              type="password"
               required
+              type="password"
               id="root-password"
+              autocomplete="off"
               name="root-password-hashed"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
             />
@@ -118,8 +120,9 @@
               Confirm Password <span class="text-red-500">*</span>
             </label>
             <input
-              type="password"
               required
+              type="password"
+              autocomplete="off"
               id="confirm-password"
               name="confirm-password"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
@@ -141,9 +144,9 @@
               Source <span class="text-red-500">*</span>
             </label>
             <select
+              required
               id="source"
               name="source"
-              required
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 focus:border-sky-500 focus:ring-sky-500"
             >
               <option value="from-answer">From Answer</option>
@@ -156,12 +159,13 @@
               CIDR <span class="text-red-500">*</span>
             </label>
             <input
-              type="text"
+              required
               id="cidr"
               name="cidr"
-              data-default-value="10.0.4.238/24"
+              type="text"
+              autocomplete="off"
               placeholder="10.0.4.238/24"
-              required
+              data-default-value="10.0.4.238/24"
               title="Enter a valid IPv4 address with CIDR (e.g., 192.168.0.1/24)"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
             />
@@ -176,12 +180,13 @@
               Gateway <span class="text-red-500">*</span>
             </label>
             <input
+              required
               type="text"
               id="gateway"
               name="gateway"
+              autocomplete="off"
               placeholder="10.0.4.1"
               data-default-value="10.0.4.1"
-              required
               title="Enter a valid IPv4 address"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
             />
@@ -196,12 +201,13 @@
               DNS <span class="text-red-500">*</span>
             </label>
             <input
-              type="text"
+              required
               id="dns"
               name="dns"
+              type="text"
+              autocomplete="off"
               placeholder="10.0.4.1, 9.9.9.9"
               data-default-value="10.0.4.1"
-              required
               title="Enter one or more IPv4 addresses separated by commas"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
             />
@@ -217,20 +223,36 @@
     <!-- Modal Controls -->
     <div class="flex justify-end gap-4 mt-6">
       <button
-        id="close-create-iso-modal"
         type="button"
+        id="close-create-iso-modal"
         class="px-6 py-2 bg-gray-700 border border-gray-600 text-gray-200 font-medium rounded-xl hover:bg-gray-600 hover:scale-105 cursor-pointer transition-transform duration-200 shadow-md"
       >
         Cancel
       </button>
       <button
-        id="submit-btn"
         type="submit"
+        id="submit-btn"
         form="proxmox-settings-form"
         class="px-6 py-2 bg-sky-500 border border-sky-600 text-slate-900 font-bold rounded-xl hover:bg-sky-400 hover:scale-105 cursor-pointer transition-transform duration-200 shadow-lg"
       >
         Save
       </button>
     </div>
+  </div>
+</div>
+
+<!-- Loading Spinner -->
+<div
+  id="loading-spinner"
+  class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[60]"
+>
+  <div class="flex flex-col items-center gap-4">
+    <!-- Spinner -->
+    <div
+      class="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin shadow-lg"
+    ></div>
+
+    <!-- Loading text -->
+    <p class="text-sky-400 font-semibold tracking-wide">Processing...</p>
   </div>
 </div>

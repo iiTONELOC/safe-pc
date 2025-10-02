@@ -50,7 +50,9 @@ class BaseRoutes:
         # Root endpoint serving the main page
         @app.get(path="/", response_class=HTMLResponse)
         async def read_root(request: Request):
-            return templates.TemplateResponse(
+            # generate a new jwt for the session if needed
+
+            response = templates.TemplateResponse(
                 name="/pages/main/index.html",
                 context={
                     "request": request,
@@ -58,6 +60,8 @@ class BaseRoutes:
                     "current_year": BaseRoutes.CURRENT_YEAR,
                 },
             )
+
+            return response
 
         # Development mode features - hot-reloading, etc.
         if dev:
