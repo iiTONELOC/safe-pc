@@ -29,7 +29,8 @@ share/python-wheels/
 MANIFEST
 
 .DS_Store
-
+log[s]/
+data/
 .log
 .env
 certs

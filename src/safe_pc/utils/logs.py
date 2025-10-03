@@ -19,7 +19,7 @@ _configured = False
 
 def _project_log_dir() -> Path:
     """Get the project's log directory, creating it if necessary."""
-    log_dir = Path(__file__).resolve().parents[2] / "logs"
+    log_dir = Path(__file__).resolve().parents[3] / "logs"
     if not log_dir.exists():
         log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
