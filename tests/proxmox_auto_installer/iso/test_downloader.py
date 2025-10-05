@@ -20,19 +20,18 @@ from safe_pc.proxmox_auto_installer.iso.downloader import (
 )
 
 
-def test_get_latest_proxmox_iso_url():
+@pytest.mark.asyncio
+async def test_get_latest_proxmox_iso_url():
     """
     Test verifies that get_latest_proxmox_iso_url correctly fetches the latest Proxmox
     VE ISO URL and its SHA-256 checksum.
     """
-    url, sha256 = get_latest_proxmox_iso_url()
+    url, sha256 = await get_latest_proxmox_iso_url()
     assert validate_iso_url(url)
     assert validate_sha256(sha256)
 
     # ensure that errors are handled gracefully
-
-    url, sha256 = get_latest_proxmox_iso_url("invalid_url")
-
+    url, sha256 = await get_latest_proxmox_iso_url("invalid_url")
     assert url == ""
     assert sha256 == ""
 
@@ -98,7 +97,8 @@ def test_need_to_download():
         assert not _need_to_download(iso_file, valid_sha.lower())
 
 
-def test_handle_download(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_handle_download(monkeypatch: pytest.MonkeyPatch) -> None:
     import safe_pc.proxmox_auto_installer.iso.downloader as downloader
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -108,7 +108,7 @@ def test_handle_download(monkeypatch: pytest.MonkeyPatch) -> None:
         #  Case 1: Successful download
         called: dict[str, object] = {}
 
-        def fake_download(url: str, path: Path) -> None:
+        async def fake_download(url: str, path: Path) -> None:
             called["download"] = (url, path)
             path.write_text("ISO DATA")
 
@@ -119,7 +119,7 @@ def test_handle_download(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(downloader, "handle_download", fake_download)
         monkeypatch.setattr(downloader, "compute_sha256", fake_sha256)
 
-        _handle_download("http://example.com/file.iso", dest)  # type: ignore
+        await _handle_download("http://example.com/file.iso", dest)  # type: ignore
 
         assert called["download"][0] == "http://example.com/file.iso"  # type: ignore
         assert called["download"][1] == dest  # type: ignore
@@ -134,7 +134,7 @@ def test_handle_download(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(downloader, "handle_download", bad_download)
 
         with pytest.raises(RuntimeError):
-            _handle_download("http://bad.com/file.iso", dest)  # type: ignore
+            await _handle_download("http://bad.com/file.iso", dest)  # type: ignore
 
         # The dest file should have been cleaned up
         assert not dest.exists()

@@ -29,6 +29,34 @@ def handle_keyboard_interrupt(func):
     return wrapper
 
 
+def handle_keyboard_interrupt_async(func):
+    """Decorator to handle KeyboardInterrupt exceptions gracefully in async functions.
+
+    Args:
+        func (callable): The async function to be decorated.
+
+    Returns:
+        callable: The wrapped async function with KeyboardInterrupt handling.
+
+    Usage:
+    ```python
+        @handle_keyboard_interrupt_async
+        async def main():
+            # do some stuff
+            print("Running...")
+    ```
+    """
+
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except KeyboardInterrupt:
+            print("Operation cancelled by user.")
+            exit(0)
+
+    return wrapper
+
+
 def IS_TESTING() -> bool:
     """Check if the code is running in a testing environment.
 

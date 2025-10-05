@@ -5,10 +5,10 @@ Proxmox VE and verifying it hasn't been tampered with using via SHA-256 checksum
 
 from re import match
 from pathlib import Path
-from requests import get
+from httpx import AsyncClient
 from logging import getLogger
 from safe_pc.utils.logs import setup_logging
-from safe_pc.utils.utils import IS_TESTING
+from safe_pc.utils.utils import IS_TESTING, handle_keyboard_interrupt_async
 from safe_pc.proxmox_auto_installer.utils.downloader import handle_download
 from safe_pc.utils.crypto.crypto import compute_sha256, validate_sha256, verify_sha256
 from bs4 import BeautifulSoup
@@ -57,7 +57,7 @@ def validate_iso_url(url: str) -> bool:
     return bool(match(pattern, url))
 
 
-def get_latest_proxmox_iso_url(
+async def get_latest_proxmox_iso_url(
     url: str = "https://www.proxmox.com/en/downloads/proxmox-virtual-environment",
 ) -> tuple[str, str]:
     """Fetches the latest Proxmox VE ISO download URL and its SHA-256 checksum.
@@ -72,12 +72,13 @@ def get_latest_proxmox_iso_url(
 
     # Fetch the Proxmox downloads page using requests
     try:
-        response = get(url, timeout=10)
-        response.raise_for_status()
+        async with AsyncClient(timeout=10) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            data = response.text
     except Exception as e:
         LOGGER.error(f"Failed to fetch Proxmox downloads page: {e}")
         return "", ""
-    data = response.text
 
     # parse the HTML to find the latest ISO link
     soup = BeautifulSoup(data, "html.parser")
@@ -146,7 +147,7 @@ def _need_to_download(iso_path: Path, expected_sha256: str) -> bool:
         return True
 
 
-def _handle_download(url: str, dest_path: Path):
+async def _handle_download(url: str, dest_path: Path):
     """Handles the downloading of the ISO file from the given URL to the destination path.
 
     Args:
@@ -154,7 +155,7 @@ def _handle_download(url: str, dest_path: Path):
         dest_path (Path): The path to save the downloaded ISO file.
     """
     try:
-        handle_download(url, dest_path)
+        await handle_download(url, dest_path)
         # Compute hash efficiently using buffered read
         sha256_hash = compute_sha256(str(dest_path))
         dest_path.with_suffix(".sha256").write_text(sha256_hash)
@@ -165,7 +166,8 @@ def _handle_download(url: str, dest_path: Path):
         raise
 
 
-def main():  # pragma: no cover start
+@handle_keyboard_interrupt_async
+async def run():  # pragma: no cover start
     """Main Entry point for the Proxmox ISO downloader module.
 
     Flow:
@@ -183,7 +185,7 @@ def main():  # pragma: no cover start
     setup_logging()
 
     # 1. get the url and hash for the latest iso
-    latest_url, latest_sha256 = get_latest_proxmox_iso_url()
+    latest_url, latest_sha256 = await get_latest_proxmox_iso_url()
 
     # verify the url and sha are valid
     if not _validate_latest(latest_url, latest_sha256):
@@ -203,7 +205,7 @@ def main():  # pragma: no cover start
 
     LOGGER.info(f"Please Wait. Downloading Proxmox VE ISO from {latest_url}...")
     iso_file_path = get_iso_folder_path(iso_name) / f"{iso_name}.iso"
-    _handle_download(latest_url, iso_file_path)
+    await _handle_download(latest_url, iso_file_path)
 
     # 4. Verify the download
     if verify_sha256(str(iso_file_path), latest_sha256):
@@ -214,6 +216,13 @@ def main():  # pragma: no cover start
         return
 
     LOGGER.info(f"{iso_name} download and verification complete.")
+
+
+def main():
+    """Wrapper to run the main async function."""
+    import asyncio
+
+    asyncio.run(run())
 
 
 if __name__ == "__main__":

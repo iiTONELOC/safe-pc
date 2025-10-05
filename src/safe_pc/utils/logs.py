@@ -8,13 +8,13 @@ Functions exported by this module:
 
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
-from logging import Logger, Formatter, StreamHandler, DEBUG, getLogger
+from logging import INFO, Logger, Formatter, StreamHandler, DEBUG, getLogger
 
-from safe_pc.utils.utils import IS_TESTING
+from safe_pc.utils.utils import IS_TESTING, IS_VERBOSE
 
 
-BACKUP_LOG_COUNT = 5
-_configured = False
+BACKUP_LOG_COUNT = 5  # in days
+_configured = False  # module-level flag to ensure logging is only configured once
 
 
 def _project_log_dir() -> Path:
@@ -33,7 +33,7 @@ def _project_log_file():
     return log_path
 
 
-def setup_logging(level: int = DEBUG, log_file: str = "capstone") -> Logger:
+def setup_logging(level: int = INFO, log_file: str = "capstone") -> Logger:
     """
     Configure root logging once for the entire process.
     Returns the package logger for convenience.
@@ -49,11 +49,14 @@ def setup_logging(level: int = DEBUG, log_file: str = "capstone") -> Logger:
     if _configured:
         return getLogger(log_file)
 
+    # determine if we need DEBUG level logging
+    if level != DEBUG and IS_TESTING() or IS_VERBOSE():
+        level = DEBUG
+
     log_path = _project_log_file()
     fmt = Formatter("%(asctime)s - [%(name)s] - %(levelname)s - %(message)s")
 
     # File handler with rotation (10 MB per file, keep 5 backups)
-
     file_handler = RotatingFileHandler(
         log_path,
         mode="a" if not IS_TESTING() else "w",
@@ -75,7 +78,7 @@ def setup_logging(level: int = DEBUG, log_file: str = "capstone") -> Logger:
 
     root.info(
         f" Logging initialized. Log file: ./{Path(log_path).relative_to(Path.cwd())} ".center(
-            70, "*"
+            80, "*"
         )
     )
 

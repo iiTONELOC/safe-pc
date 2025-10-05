@@ -16,7 +16,8 @@ dependencies = [
     "python-dotenv (>=1.1.1,<2.0.0)",
     "requests (>=2.32.5,<3.0.0)",
     "beautifulsoup4 (>=4.14.2,<5.0.0)",
-    "tqdm (>=4.67.1,<5.0.0)"
+    "tqdm (>=4.67.1,<5.0.0)",
+    "aiofiles (>=24.1.0,<25.0.0)"
     ]
 
 [tool.poetry]
@@ -28,11 +29,13 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 "gen-cert" = "safe_pc.utils.X509:main"
+"dl-iso" = "safe_pc.proxmox_auto_installer.iso.downloader:main"
 dev = "safe_pc.proxmox_auto_installer.scripts.run_dev:main"
 start = "safe_pc.proxmox_auto_installer.back_end.server:main"
 
 [dependency-groups]
 dev = [
     "pytest (>=8.4.2,<9.0.0)",
-    "websockets (>=15.0.1,<16.0.0)"
+    "websockets (>=15.0.1,<16.0.0)",
+    "pytest-asyncio (>=1.2.0,<2.0.0)"
 ]
