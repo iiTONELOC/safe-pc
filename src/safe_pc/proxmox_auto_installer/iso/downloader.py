@@ -5,12 +5,14 @@ Proxmox VE and verifying it hasn't been tampered with using via SHA-256 checksum
 
 from re import match
 from pathlib import Path
+from typing import Callable
 from httpx import AsyncClient
 from logging import getLogger
-from safe_pc.utils.logs import setup_logging
-from safe_pc.utils.utils import IS_TESTING, handle_keyboard_interrupt_async
-from safe_pc.proxmox_auto_installer.utils.downloader import handle_download
-from safe_pc.utils.crypto.crypto import compute_sha256, validate_sha256, verify_sha256
+
+from safe_pc.utils.utils import IS_TESTING
+from safe_pc.utils.crypto.crypto import compute_sha256
+from safe_pc.proxmox_auto_installer.utils.download import handle_download
+
 from bs4 import BeautifulSoup
 
 LOGGER = getLogger(
@@ -97,28 +99,7 @@ async def get_latest_proxmox_iso_url(
     return iso_link["href"], sha_dd_code.text.strip()  # type: ignore
 
 
-def _validate_latest(url: str, sha256: str) -> bool:
-    """Validates the latest Proxmox VE ISO URL and SHA-256 checksum.
-
-    Args:
-        url (str): The ISO download URL to validate.
-        sha256 (str): The SHA-256 checksum to validate.
-
-    Returns:
-        bool: True if both the URL and checksum are valid, False otherwise.
-    """
-    is_url_valid = validate_iso_url(url)
-    is_sha256_valid = validate_sha256(sha256)
-
-    if not is_url_valid:
-        LOGGER.error(f"Invalid Proxmox VE ISO URL: {url}")
-    if not is_sha256_valid:
-        LOGGER.error(f"Invalid SHA-256 checksum format: {sha256}")
-
-    return is_url_valid and is_sha256_valid
-
-
-def _need_to_download(iso_path: Path, expected_sha256: str) -> bool:
+def need_to_download(iso_path: Path, expected_sha256: str) -> bool:
     """Determines if the ISO needs to be downloaded based on its existence and
     SHA-256 checksum.
 
@@ -131,99 +112,35 @@ def _need_to_download(iso_path: Path, expected_sha256: str) -> bool:
     """
     if not iso_path.exists():
         LOGGER.info(f"ISO does not exist at {iso_path}, need to download.")
-        # create the directory if it doesn't exist
-        if not iso_path.exists():
-            iso_path.mkdir(parents=True, exist_ok=True)
         return True
 
     LOGGER.info(f"ISO already exists at {iso_path}, verifying SHA-256...")
-    hash_file = iso_path / f"{iso_path.name}.sha256"
+    hash_file = iso_path.with_suffix(".sha256")
     existing_hash = hash_file.read_text().strip() if hash_file.exists() else ""
 
     if existing_hash.lower() == expected_sha256.lower():
+        LOGGER.info("Existing ISO is valid, no need to re-download.")
         return False
     else:
         LOGGER.warning("Existing ISO is invalid, need to re-download.")
         return True
 
 
-async def _handle_download(url: str, dest_path: Path):
-    """Handles the downloading of the ISO file from the given URL to the destination path.
-
+async def handle_iso_download(
+    url: str, dest_path: Path, on_update: Callable | None = None
+):
+    """Downloads the ISO from the specified URL to the destination path and
+    saves its SHA-256 checksum in a .sha256 file.
     Args:
         url (str): The URL to download the ISO from.
         dest_path (Path): The path to save the downloaded ISO file.
     """
     try:
-        await handle_download(url, dest_path)
-        # Compute hash efficiently using buffered read
-        sha256_hash = compute_sha256(str(dest_path))
+        await handle_download(url, dest_path, on_update)
+        sha256_hash = await compute_sha256(str(dest_path))
         dest_path.with_suffix(".sha256").write_text(sha256_hash)
     except Exception as e:
         LOGGER.error(f"Failed to download ISO: {e}")
         if dest_path.exists():
             dest_path.unlink()
         raise
-
-
-@handle_keyboard_interrupt_async
-async def run():  # pragma: no cover start
-    """Main Entry point for the Proxmox ISO downloader module.
-
-    Flow:
-
-    1. Get the latest ISO URL and SHA-256 checksum from the Proxmox downloads page.
-
-    2. Validate the URL and checksum format to ensure data is as expected.
-
-    3. Check if the ISO already exists and if its checksum matches.
-
-    4. If not, download the ISO and save it to the data/isos folder.
-
-    5. Verify the downloaded ISO's checksum.
-    """
-    setup_logging()
-
-    # 1. get the url and hash for the latest iso
-    latest_url, latest_sha256 = await get_latest_proxmox_iso_url()
-
-    # verify the url and sha are valid
-    if not _validate_latest(latest_url, latest_sha256):
-        LOGGER.error(
-            "Failed to validate the latest Proxmox VE ISO URL or SHA-256 checksum."
-        )
-        return
-
-    # 2. Check if we need to download the iso or if we already have it
-    iso_name = latest_url.split("/")[-1].replace(".iso", "")
-    have_to_download = _need_to_download(get_iso_folder_path(iso_name), latest_sha256)
-
-    # 3. Download only if needed
-    if not have_to_download:
-        LOGGER.info("No download needed.")
-        return
-
-    LOGGER.info(f"Please Wait. Downloading Proxmox VE ISO from {latest_url}...")
-    iso_file_path = get_iso_folder_path(iso_name) / f"{iso_name}.iso"
-    await _handle_download(latest_url, iso_file_path)
-
-    # 4. Verify the download
-    if verify_sha256(str(iso_file_path), latest_sha256):
-        LOGGER.info("Downloaded ISO is valid.")
-    else:
-        LOGGER.error("Downloaded ISO is invalid, removing file.")
-        iso_file_path.unlink()
-        return
-
-    LOGGER.info(f"{iso_name} download and verification complete.")
-
-
-def main():
-    """Wrapper to run the main async function."""
-    import asyncio
-
-    asyncio.run(run())
-
-
-if __name__ == "__main__":
-    main()

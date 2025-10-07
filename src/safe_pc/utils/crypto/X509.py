@@ -6,6 +6,7 @@ from cryptography.x509.oid import NameOID
 from datetime import datetime, timedelta, timezone
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes, serialization
+from safe_pc.utils.utils import get_local_ip
 
 
 # if windows, import the required modules for setting file permissions
@@ -16,52 +17,64 @@ if os_name == "nt":
     import ntsecuritycon as con
 
 
-def generate_self_signed_cert(
-    cert_dir=Path(__file__).resolve().parents[4] / "certs",
-    name_prefix="",
-    country="US",
-    state="AZ",
-    locality="Tuscon",
-    organization="SAFE-PC",
-    common_name="127.0.0.1",
-    alt_names=None,
-    days_valid=365,
-    gen_if_exists=False,
-):
+SAFE_PC_CERT_DEFAULTS = {
+    "cert_dir": Path(__file__).resolve().parents[4] / "certs",
+    "name_prefix": "safe-pc-",
+    "country": "US",
+    "state": "AZ",
+    "locality": "Tuscon",
+    "organization": "SAFE-PC",
+    "common_name": get_local_ip(),
+    "alt_names": None,
+    "days_valid": 365,
+    "gen_if_exists": False,
+}
+
+
+def generate_self_signed_cert(**kwargs):
     """
     Generate a self-signed ECDSA certificate and private key.
 
     Args:
-        cert_dir (str|Path): Directory to save the cert and key.
-        name_prefix (str): Prefix for cert/key filenames.
-        country (str): Country code (e.g., "US").
-        state (str): State or province.
-        locality (str): Locality or city.
-        organization (str): Organization name.
-        common_name (str): Common name (e.g., hostname or IP).
-        alt_names (list[str]): Subject Alternative Names (DNS names).
-        days_valid (int): Validity period in days.
+        kwargs: Dictionary of parameters. Uses SAFE_PC_CERT_DEFAULTS for missing keys.
+        kwargs keys:
+            cert_dir (Path): Directory to save the cert and key.
+            name_prefix (str): Prefix for cert/key filenames.
+            country (str): Country code (2-letter).
+            state (str): State or province.
+            locality (str): Locality or city.
+            organization (str): Organization name.
+            common_name (str): Common name, e.g. hostname or IP.
+            alt_names (list[str]): Subject Alternative Names (list of DNS names).
+            days_valid (int): Validity period in days.
+            gen_if_exists (bool): If True, generates new cert even if one exists.
 
     Output:
         Writes {cert_dir}/{name_prefix}key.pem and {cert_dir}/{name_prefix}cert.pem
     """
 
-    cert_dir = Path(cert_dir)
+    params = {**SAFE_PC_CERT_DEFAULTS, **kwargs}
+
+    cert_dir = Path(params["cert_dir"])
+    name_prefix = params["name_prefix"]
+    country = params["country"]
+    state = params["state"]
+    locality = params["locality"]
+    organization = params["organization"]
+    common_name = params["common_name"]
+    alt_names = params["alt_names"]
+    days_valid = params["days_valid"]
+    gen_if_exists = params["gen_if_exists"]
+
     if not cert_dir.exists():
-
-        # Create the certs directory if it doesn't exist
         cert_dir.mkdir(parents=True, exist_ok=False)
-
-        # Harden permissions
         if os_name == "posix":
             cert_dir.chmod(0o700)
         elif os_name == "nt":
             _harden_windows_dir(cert_dir)
 
-    # Generate ECDSA private key
     private_key = ec.generate_private_key(ec.SECP256R1())
 
-    # Subject/issuer info
     subject = issuer = x509.Name(
         [
             x509.NameAttribute(NameOID.COUNTRY_NAME, country),
@@ -72,13 +85,10 @@ def generate_self_signed_cert(
         ]
     )
 
-    # SAN (fallback to CN if not provided)
     if alt_names is None:
         alt_names = [common_name]
-
     san = x509.SubjectAlternativeName([x509.DNSName(name) for name in alt_names])
 
-    # Build cert
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
@@ -91,15 +101,12 @@ def generate_self_signed_cert(
         .sign(private_key, hashes.SHA256())
     )
 
-    # Paths
     key_path = cert_dir / f"{name_prefix}key.pem"
     cert_path = cert_dir / f"{name_prefix}cert.pem"
 
-    # if the files exist and we shouldn't generate new ones, return the existing paths
     if not gen_if_exists and key_path.exists() and cert_path.exists():
         return key_path, cert_path
 
-    # check if the files already exist, if they do, count up the prefix
     count = 1
     while key_path.exists() or cert_path.exists():
         key_path = cert_dir / f"{name_prefix}key({count}).pem"
@@ -107,10 +114,8 @@ def generate_self_signed_cert(
         count += 1
 
     if os_name == "nt":
-        # use DPAPI to protect the private key on Windows
         write_dpapi_protected_key(private_key, key_path)
     else:
-        # Write private key - locked down permissions on non-Windows
         key_path.write_bytes(
             private_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
@@ -119,10 +124,8 @@ def generate_self_signed_cert(
             )
         )
 
-    # Write cert
     cert_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
 
-    # Harden permissions on the key file
     if os_name == "posix":
         key_path.chmod(0o600)
     elif os_name == "nt":
@@ -168,53 +171,64 @@ def _harden_windows_file(path: Path):
 
 
 def main():
+
     parser = ArgumentParser(
         description="Generate a self-signed ECDSA certificate and private key."
     )
+    ip = SAFE_PC_CERT_DEFAULTS["common_name"]
     parser.add_argument(
         "--cert_dir",
         type=Path,
-        default=Path(__file__).resolve().parents[4] / "certs",
-        help="Directory to save the cert and key (default: %(default)s).",
+        default=SAFE_PC_CERT_DEFAULTS["cert_dir"],
+        help=f"Directory to save the cert and key (default: {SAFE_PC_CERT_DEFAULTS['cert_dir']}).",
     )
     parser.add_argument(
-        "--name_prefix", type=str, default="", help="Prefix for cert/key filenames."
+        "--name_prefix",
+        type=str,
+        default=SAFE_PC_CERT_DEFAULTS["name_prefix"],
+        help=f"Prefix for cert/key filenames (default: {SAFE_PC_CERT_DEFAULTS['name_prefix']}).",
     )
     parser.add_argument(
-        "--country", type=str, default="US", help="Country code (default: US)."
+        "--country",
+        type=str,
+        default=SAFE_PC_CERT_DEFAULTS["country"],
+        help=f"Country code (default: {SAFE_PC_CERT_DEFAULTS['country']}).",
     )
     parser.add_argument(
-        "--state", type=str, default="AZ", help="State or province (default: AZ)."
+        "--state",
+        type=str,
+        default=SAFE_PC_CERT_DEFAULTS["state"],
+        help=f"State or province (default: {SAFE_PC_CERT_DEFAULTS['state']}).",
     )
     parser.add_argument(
         "--locality",
         type=str,
-        default="Tuscon",
-        help="Locality or city (default: Tuscon).",
+        default=SAFE_PC_CERT_DEFAULTS["locality"],
+        help=f"Locality or city (default: {SAFE_PC_CERT_DEFAULTS['locality']}).",
     )
     parser.add_argument(
         "--organization",
         type=str,
-        default="SAFE-PC",
-        help="Organization name (default: SAFE-PC).",
+        default=SAFE_PC_CERT_DEFAULTS["organization"],
+        help=f"Organization name (default: {SAFE_PC_CERT_DEFAULTS['organization']}).",
     )
     parser.add_argument(
         "--common_name",
         type=str,
-        default="127.0.0.1",
-        help="Common name, e.g. hostname or IP (default: 127.0.0.1).",
+        default=f"{ip}",
+        help=f"Common name, e.g. hostname or IP (default: {ip}).",
     )
     parser.add_argument(
         "--alt_names",
         nargs="*",
-        default=None,
+        default=SAFE_PC_CERT_DEFAULTS["alt_names"],
         help="Subject Alternative Names (space-separated list).",
     )
     parser.add_argument(
         "--days_valid",
         type=int,
-        default=365,
-        help="Validity period in days (default: 365).",
+        default=SAFE_PC_CERT_DEFAULTS["days_valid"],
+        help=f"Validity period in days (default: {SAFE_PC_CERT_DEFAULTS['days_valid']}).",
     )
     parser.add_argument(
         "--gen_if_exists",
@@ -236,9 +250,9 @@ def main():
         days_valid=args.days_valid,
         gen_if_exists=args.gen_if_exists,
     )
-
-    print(f"Generated key:  {key_path}")
-    print(f"Generated cert: {cert_path}")
+    print(f"Successfully generated self-signed certificate and key for host: {ip}")
+    print(f"  Generated key:  {key_path}")
+    print(f"  Generated cert: {cert_path}")
 
 
 if __name__ == "__main__":

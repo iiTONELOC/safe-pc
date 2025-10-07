@@ -2,7 +2,7 @@
 Description: This module provides reusable utilities for logging.
 
 Functions exported by this module:
-- `setup_logging(level: int = DEBUG, log_file: str = "capstone") -> Logger`:
+- `setup_logging(level: int = DEBUG, log_file: str = "safe_pc") -> Logger`:
     Configures root logging once for the entire process and returns it.
 """
 
@@ -27,13 +27,13 @@ def _project_log_dir() -> Path:
 
 def _project_log_file():
     """Get the project's log file path."""
-    log_file = "capstone_tests" if IS_TESTING() else "capstone"
+    log_file = "safe_pc_tests" if IS_TESTING() else "safe_pc"
     log_dir = _project_log_dir()
     log_path = log_dir / f"{log_file}.log"
     return log_path
 
 
-def setup_logging(level: int = INFO, log_file: str = "capstone") -> Logger:
+def setup_logging(level: int = INFO, log_file: str = "safe_pc") -> Logger:
     """
     Configure root logging once for the entire process.
     Returns the package logger for convenience.

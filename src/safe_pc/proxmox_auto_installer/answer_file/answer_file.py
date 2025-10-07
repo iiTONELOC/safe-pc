@@ -1,36 +1,41 @@
 from re import sub, MULTILINE
-from safe_pc.proxmox_auto_installer.answer_file import (
-    disk as disk_config,
-    _global as global_config,
-    network as network_config,
-)
+from safe_pc.proxmox_auto_installer.answer_file.disk import DiskConfig
+from safe_pc.proxmox_auto_installer.answer_file._global import GlobalConfig
+from safe_pc.proxmox_auto_installer.answer_file.network import NetworkConfig
 
 from pydantic import BaseModel, Field
 from tomlkit import dumps as toml_dumps
 
 
 class ProxmoxAnswerFile(BaseModel):
-    global_config = Field(
+    model_config = {"populate_by_name": True}
+
+    global_config: GlobalConfig = Field(
         ...,
         description="Global configuration settings",
-        example=global_config.GlobalConfig.model_dump(),
         alias="global",
     )
-    network = Field(
+    network: NetworkConfig = Field(
         ...,
         description="Network configuration settings",
-        example=network_config.NetworkConfig.model_dump(),
     )
-    disk_setup = Field(
+    disk_setup: DiskConfig = Field(
         ...,
         description="Disk setup configuration settings",
-        example=disk_config.DiskConfig.model_dump(),
         alias="disk-setup",
     )
 
-    # provide a method to dump to a dict with aliases
     def to_dict(self) -> dict:
-        return self.model_dump(by_alias=True)
+        # ensure none values are removed
+        def remove_none(d):
+            if isinstance(d, dict):
+                return {k: remove_none(v) for k, v in d.items() if v is not None}
+            elif isinstance(d, list):
+                return [remove_none(v) for v in d]
+            else:
+                return d
+
+        return remove_none(self.model_dump(by_alias=True))
 
     def to_json(self) -> str:
         return self.model_dump_json(by_alias=True)
@@ -42,3 +47,4 @@ class ProxmoxAnswerFile(BaseModel):
         toml_str = toml_dumps(self.to_dict())
         # ensure keys are not quoted
         toml_str = sub(r'^"([^"]+)"\s*=', r"\1 =", toml_str, flags=MULTILINE)
+        return toml_str

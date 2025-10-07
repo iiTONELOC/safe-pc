@@ -34,3 +34,4 @@ data/
 .log
 .env
 certs
+.pytest*

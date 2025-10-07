@@ -2,15 +2,15 @@ from asyncio import run
 from pathlib import Path
 from sys import exit, argv
 
-from safe_pc.proxmox_auto_installer.utils.jwt import is_jwt_valid, jwt_middleware
-from safe_pc.utils.utils import handle_keyboard_interrupt
 from safe_pc.utils.crypto.temp_key_file import TempKeyFile
 from safe_pc.utils.crypto.dpapi import read_dpapi_protected_key
+from safe_pc.proxmox_auto_installer.utils.jwt import jwt_middleware
+from safe_pc.utils.utils import get_local_ip, handle_keyboard_interrupt
 from safe_pc.proxmox_auto_installer.back_end.routes.routes import PiRoutes
 
-from uvicorn import Config, Server
 from fastapi import FastAPI
 from dotenv import load_dotenv
+from uvicorn import Config, Server
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,10 +22,12 @@ _MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app"
 _DEV_MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app_dev"
 
 
+# Proxmox Install Server
 class PiServer:
+    IP = get_local_ip()
     CORS_ORIGINS = [
-        "https://127.0.0.1",
-        "https://127.0.0.1:33008",
+        f"https://{IP}",
+        f"https://{IP}:33008",
     ]
     STATIC_DIR = str(object=_CURRENT_DIR.parent / "front_end" / "static")
 
@@ -106,15 +108,18 @@ class PiServer:
             Exception: If an error occurs during server startup, prints the error and exits the process with code 1.
         """
         cert_dir = Path(__file__).resolve().parents[4] / "certs"
-        with TempKeyFile(read_dpapi_protected_key(cert_dir / "key.pem")) as key_path:
+        with TempKeyFile(
+            read_dpapi_protected_key(cert_dir / "safe-pc-key.pem")
+        ) as key_path:
             try:
                 config = Config(
                     app=(_DEV_MAIN if dev else _MAIN),
                     port=33008,
+                    host=f"{PiServer.IP}",
                     factory=True,
                     log_level="info",
                     ssl_keyfile=str(object=key_path),
-                    ssl_certfile=str(object=cert_dir / "cert.pem"),
+                    ssl_certfile=str(object=cert_dir / "safe-pc-cert.pem"),
                 )
                 server = Server(config=config)
                 await server.serve()

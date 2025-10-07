@@ -1,4 +1,16 @@
 from os import getenv
+from socket import gethostname, gethostbyname
+
+
+def get_local_ip() -> str:
+    """Gets the local IP address of the machine.
+
+    Returns:
+        str: The local IP address.
+    """
+    hostname = gethostname()
+    local_ip = gethostbyname(hostname)
+    return local_ip
 
 
 def handle_keyboard_interrupt(func):
@@ -22,34 +34,6 @@ def handle_keyboard_interrupt(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except KeyboardInterrupt:
-            print("Operation cancelled by user.")
-            exit(0)
-
-    return wrapper
-
-
-def handle_keyboard_interrupt_async(func):
-    """Decorator to handle KeyboardInterrupt exceptions gracefully in async functions.
-
-    Args:
-        func (callable): The async function to be decorated.
-
-    Returns:
-        callable: The wrapped async function with KeyboardInterrupt handling.
-
-    Usage:
-    ```python
-        @handle_keyboard_interrupt_async
-        async def main():
-            # do some stuff
-            print("Running...")
-    ```
-    """
-
-    async def wrapper(*args, **kwargs):
-        try:
-            return await func(*args, **kwargs)
         except KeyboardInterrupt:
             print("Operation cancelled by user.")
             exit(0)

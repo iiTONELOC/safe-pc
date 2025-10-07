@@ -36,6 +36,15 @@ class ProxmoxCountryCodeHelper:
         self._ensure_initialized()
         return self._country_codes
 
+    def get_country_codes_list(self) -> list[str]:
+        """Get a list of all country codes.
+
+        Returns:
+            list[str]: List of country codes (e.g., ['US', 'GB', 'FR']).
+        """
+        self._ensure_initialized()
+        return list(self._country_codes.values())
+
     def get_country_name(self, code: str) -> str | None:
         """Get the country name for a given country code.
 

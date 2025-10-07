@@ -1,79 +1,117 @@
-from safe_pc.proxmox_auto_installer.constants import PROXMOX_ALLOWED_KEYBOARDS
-from safe_pc.proxmox_auto_installer.utils.tzd import ProxmoxTimezoneHelper
+from re import compile as re_compile
 from pydantic import BaseModel, Field, field_validator
+from safe_pc.proxmox_auto_installer.utils.tzd import ProxmoxTimezoneHelper
+from safe_pc.proxmox_auto_installer.constants import PROXMOX_ALLOWED_KEYBOARDS
+from safe_pc.proxmox_auto_installer.utils.country_codes import ProxmoxCountryCodeHelper
 
 
-class AnswerFileSection(BaseModel):
-    section_name: str
-    options: dict[str, str]
+timezone_list = ProxmoxTimezoneHelper()._timezones
+country_list = ProxmoxCountryCodeHelper().get_country_codes_list()
 
-
-"""
-   "global": {
-            "keyboard": keyboard,
-            "country": country,
-            "timezone": timezone,
-            "fqdn": "proxmox.lab.local",
-            "mailto": "root@localhost",
-            "root-password-hashed": hashed_password,
-        },
-"""
+# Regex Patterns
+COUNTRY_CODE_PATTERN = re_compile(r"^[A-Z]{2}$")
+KEYBOARD_COUNTRY_PATTERN = re_compile(r"^[a-z]{2}(-[a-z]{2})?$")
+TIMEZONE_PATTERN = re_compile(r"^[A-Za-z_]+/[A-Za-z_]+(/[A-Za-z_]+)?$")
+FQDN_PATTERN = re_compile(
+    r"^([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$"
+)
+HASHED_PASSWORD_PATTERN = re_compile(
+    r"^\$6\$rounds=\d{6}\$[./A-Za-z0-9]{8}\$[./A-Za-z0-9]{86}$"
+)
+EMAIL_OR_LOCALHOST_PATTERN = re_compile(
+    r"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)|^(root|admin|user)@localhost$"
+)
 
 
 class GlobalConfig(BaseModel):
+    model_config = {"populate_by_name": True}
+
     keyboard: str = Field(
-        default="us",
-        Required=True,
+        default="en-us",
         description="Keyboard layout code",
-        example="us",
-        regex="^[a-z]{2}(-[a-z]{2})?$",
+        pattern=KEYBOARD_COUNTRY_PATTERN.pattern,
     )
     country: str = Field(
-        default="us",
-        Required=True,
+        default="US",
         description="Country code",
-        example="us",
-        regex="^[a-z]{2}(-[a-z]{2})?$",
+        pattern=COUNTRY_CODE_PATTERN.pattern,
     )
     timezone: str = Field(
         default="America/New_York",
-        Required=True,
         description="Timezone string",
-        example="America/New_York",
-        regex="^[A-Za-z_]+/[A-Za-z_]+(/[A-Za-z_]+)?$",
+        pattern=TIMEZONE_PATTERN.pattern,
     )
     fqdn: str = Field(
         default="proxmox.lab.local",
-        Required=True,
+        max_length=255,
         description="Fully Qualified Domain Name for the Proxmox server",
-        example="proxmox.lab.local",
-        regex="^(?=.{1,255}$)([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,63}$",
+        pattern=FQDN_PATTERN.pattern,
     )
     mailto: str = Field(
         default="root@localhost",
         description="Email address for system notifications",
-        example="root@localhost",
-        regex="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+        pattern=EMAIL_OR_LOCALHOST_PATTERN.pattern,
     )
     root_password_hashed: str = Field(
-        ...,
+        default="$6$rounds=656000$12345678$" + "A" * 86,
         description="Hashed root password for the Proxmox server",
-        example="$6$rounds=656000$saltsalt$hashedpasswordhashhashhashhashhashhashhashhashhash",
-        regex="^\\$6\\$rounds=\\d+\\$[./A-Za-z0-9]{8}\\$[./A-Za-z0-9]{86}$",
+        pattern=HASHED_PASSWORD_PATTERN.pattern,
         alias="root-password-hashed",
     )
 
     @field_validator("keyboard")
-    @classmethod
-    def validate_keyboard(cls, v: str) -> str:
-        if v not in PROXMOX_ALLOWED_KEYBOARDS:
-            raise ValueError(f"Invalid keyboard layout: {v}")
-        return v
+    def validate_keyboard_pattern(cls, keyboard_value: str) -> str:
+        if not KEYBOARD_COUNTRY_PATTERN.match(keyboard_value):
+            raise ValueError(f"Invalid keyboard pattern: {keyboard_value}")
+        if keyboard_value not in PROXMOX_ALLOWED_KEYBOARDS:
+            raise ValueError(f"Invalid keyboard layout: {keyboard_value}")
+        return keyboard_value
+
+    @field_validator("country")
+    def validate_country_pattern(cls, country_value: str) -> str:
+        if not COUNTRY_CODE_PATTERN.match(country_value):
+            raise ValueError(f"Invalid country pattern: {country_value}")
+        if country_value not in country_list:
+            raise ValueError(f"Invalid country code: {country_value}")
+        return country_value
 
     @field_validator("timezone")
-    @classmethod
-    def validate_timezone(cls, v: str) -> str:
+    def validate_timezone_pattern(cls, timezone_value: str) -> str:
+        if not TIMEZONE_PATTERN.match(timezone_value):
+            raise ValueError(f"Invalid timezone pattern: {timezone_value}")
+        if timezone_value not in timezone_list:
+            raise ValueError(f"Invalid timezone: {timezone_value}")
+        return timezone_value
+
+    @field_validator("fqdn")
+    def validate_fqdn_pattern(cls, fqdn_value: str) -> str:
+        if not FQDN_PATTERN.match(fqdn_value):
+            raise ValueError(f"Invalid fqdn pattern: {fqdn_value}")
+        return fqdn_value
+
+    @field_validator("mailto")
+    def validate_mailto_pattern(cls, mailto_value: str) -> str:
+        if not EMAIL_OR_LOCALHOST_PATTERN.match(mailto_value):
+            raise ValueError(f"Invalid mailto pattern: {mailto_value}")
+        return mailto_value
+
+    @field_validator("root_password_hashed")
+    def validate_root_password_hashed_pattern(cls, hashed_password_value: str) -> str:
+        if not HASHED_PASSWORD_PATTERN.match(hashed_password_value):
+            raise ValueError(
+                f"Invalid root_password_hashed pattern: {hashed_password_value}"
+            )
+        return hashed_password_value
+
+    @field_validator("keyboard")
+    def validate_keyboard_allowed(cls, keyboard_value: str) -> str:
+        if keyboard_value not in PROXMOX_ALLOWED_KEYBOARDS:
+            raise ValueError(f"Invalid keyboard layout: {keyboard_value}")
+        return keyboard_value
+
+    @field_validator("timezone")
+    def validate_timezone_allowed(cls, timezone_value: str) -> str:
         tz_helper = ProxmoxTimezoneHelper()
-        if v not in tz_helper.get_timezones():
-            raise ValueError(f"Invalid timezone: {v}")
-        return v
+        if timezone_value not in tz_helper.get_timezones():
+            raise ValueError(f"Invalid timezone: {timezone_value}")
+        return timezone_value

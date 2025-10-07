@@ -28,8 +28,8 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-"gen-cert" = "safe_pc.utils.X509:main"
-"dl-iso" = "safe_pc.proxmox_auto_installer.iso.downloader:main"
+"gen-cert" = "safe_pc.utils.crypto.X509:main"
+"dl-iso" = "safe_pc.proxmox_auto_installer.iso.iso:main"
 dev = "safe_pc.proxmox_auto_installer.scripts.run_dev:main"
 start = "safe_pc.proxmox_auto_installer.back_end.server:main"
 

@@ -1,70 +1,66 @@
+from re import compile as re_compile
+from pydantic import BaseModel, Field, field_validator
 from safe_pc.proxmox_auto_installer.constants import (
     PROXMOX_ALLOWED_FILESYSTEMS,
     PROXMOX_ALLOWED_ZFS_RAID,
     PROXMOX_ALLOWED_BTRFS_RAID,
 )
-from safe_pc.proxmox_auto_installer.utils.tzd import ProxmoxTimezoneHelper
-from pydantic import BaseModel, Field, field_validator
 
-# note: Not really sure we will let users select anything here
-
-
-"""
-        "disk-setup": {
-            "filesystem": "zfs",
-            "zfs.raid": "raid0",
-            "disk-list": [f"{disk}"],
-        },
-"""
+DISK_PATH_PATTERN = re_compile(r"^/dev/[a-zA-Z0-9]+$")
+FILESYSTEM_PATTERN = re_compile(r"^(ext4|xfs|zfs|btrfs)$")
+BTRFS_RAID_PATTERN = re_compile(r"^(raid0|raid1|raid10)$")
+ZFS_RAID_PATTERN = re_compile(r"^(raid0|raid1|raid10|raidz-1|raidz-2|raidz-3)$")
 
 
 class DiskConfig(BaseModel):
+    model_config = {"populate_by_name": True}
+
     filesystem: str = Field(
         default="zfs",
-        Required=True,
         description="Filesystem type for disk setup",
-        example="zfs",
-        regex="^(ext4|xfs|zfs|btrfs)$",
-    )
-
-    zfs_raid: str | None = Field(
-        default="raid0",
-        description="ZFS RAID configuration (required if filesystem is zfs)",
-        example="raid0",
-        regex="^(raid0|raid1|raid10|raidz-1|raidz-2|raidz-3)$",
-        alias="zfs.raid",
+        pattern=FILESYSTEM_PATTERN.pattern,
     )
 
     btrfs_raid: str | None = Field(
         default=None,
         description="Btrfs RAID configuration (required if filesystem is btrfs)",
-        example="raid1",
-        regex="^(raid0|raid1|raid10)$",
         alias="btrfs.raid",
+        pattern=BTRFS_RAID_PATTERN.pattern,
+    )
+
+    zfs_raid: str | None = Field(
+        default="raid0",
+        description="ZFS RAID configuration (required if filesystem is zfs)",
+        alias="zfs.raid",
+        pattern=ZFS_RAID_PATTERN.pattern,
     )
 
     disk_list: list[str] = Field(
-        default_factory=list,
-        Required=True,
+        default=["/dev/sda"],
         description="List of disks to use for installation",
-        example=["/dev/sda"],
-        min_items=1,
-        max_items=10,
-        regex=r"^/dev/[a-zA-Z0-9]+$",
+        min_length=1,
+        max_length=10,
+        alias="disk-list",
     )
 
-    # validate each field, for example if raid 1 is selected, ensure at least 2 disks are provided
-    # and so on.
+    # FILESYSTEM VALIDATION
+    @field_validator("filesystem", mode="before")
+    def validate_filesystem_pattern(cls, value: str):
+        if not FILESYSTEM_PATTERN.match(value):
+            raise ValueError(f"Invalid filesystem pattern: {value}")
+        return value
 
     @field_validator("filesystem")
-    def validate_filesystem(cls, fs_value):
-        if fs_value not in PROXMOX_ALLOWED_FILESYSTEMS:
-            raise ValueError(f"Invalid filesystem: {fs_value}")
-        return fs_value
+    def validate_filesystem_allowed(cls, value: str):
+        if value not in PROXMOX_ALLOWED_FILESYSTEMS:
+            raise ValueError(f"Invalid filesystem: {value}")
+        return value
 
+    # RAID VALIDATION
     @field_validator("zfs_raid", mode="before")
-    def validate_zfs_raid(cls, raid_value, values):
-        if values.get("filesystem") == "zfs":
+    def validate_zfs_raid_required(cls, raid_value, values):
+        fs = values.data.get("filesystem")
+        if fs == "zfs":
             if raid_value is None:
                 raise ValueError(
                     "ZFS RAID configuration is required when filesystem is zfs"
@@ -73,9 +69,16 @@ class DiskConfig(BaseModel):
                 raise ValueError(f"Invalid ZFS RAID configuration: {raid_value}")
         return raid_value
 
+    @field_validator("zfs_raid")
+    def validate_zfs_raid_pattern(cls, value: str | None):
+        if value and not ZFS_RAID_PATTERN.match(value):
+            raise ValueError(f"Invalid zfs_raid pattern: {value}")
+        return value
+
     @field_validator("btrfs_raid", mode="before")
-    def validate_btrfs_raid(cls, raid_value, values):
-        if values.get("filesystem") == "btrfs":
+    def validate_btrfs_raid_required(cls, raid_value, values):
+        fs = values.data.get("filesystem")
+        if fs == "btrfs":
             if raid_value is None:
                 raise ValueError(
                     "Btrfs RAID configuration is required when filesystem is btrfs"
@@ -84,26 +87,34 @@ class DiskConfig(BaseModel):
                 raise ValueError(f"Invalid Btrfs RAID configuration: {raid_value}")
         return raid_value
 
-    @field_validator("disk_list")
-    def validate_disk_list(cls, disk_list_value):
-        if len(disk_list_value) == 0:
+    @field_validator("btrfs_raid")
+    def validate_btrfs_raid_pattern(cls, value: str | None):
+        if value and not BTRFS_RAID_PATTERN.match(value):
+            raise ValueError(f"Invalid btrfs_raid pattern: {value}")
+        return value
+
+    # DISK LIST VALIDATION
+    @field_validator("disk_list", mode="before")
+    def validate_disk_list_nonempty(cls, disk_list_value: list[str]):
+        if not disk_list_value:
             raise ValueError("disk-list must be a non-empty list of disk identifiers")
-        for disk in disk_list_value:
-            if not isinstance(disk, str) or not disk.startswith("/dev/"):
-                raise ValueError(f"Invalid disk identifier: {disk}")
         return disk_list_value
 
     @field_validator("disk_list")
-    def validate_disk_count_for_raid(cls, disk_list_value, values):
-        fs = values.get("filesystem")
-        raid = (
-            values.get("zfs_raid")
-            if fs == "zfs"
-            else values.get("btrfs_raid") if fs == "btrfs" else None
-        )
+    def validate_disk_list_paths(cls, disk_list_value: list[str], values):
+        for disk in disk_list_value:
+            if not DISK_PATH_PATTERN.match(disk):
+                raise ValueError(f"Invalid disk path: {disk}")
+        fs = values.data.get("filesystem")
+        raid = None
+        if fs == "zfs":
+            raid = values.data.get("zfs_raid")
+        elif fs == "btrfs":
+            raid = values.data.get("btrfs_raid")
 
         raid_disk_requirements = {
             "zfs": {
+                "raid0": 1,
                 "raid1": 2,
                 "raid10": 2,
                 "raidz-1": 3,
