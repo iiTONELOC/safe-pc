@@ -1,9 +1,12 @@
 import pytest
 from pydantic import ValidationError
-from safe_pc.proxmox_auto_installer.answer_file._global import GlobalConfig
+from safe_pc.proxmox_auto_installer.answer_file._global import (
+    GlobalConfig,
+    GLOBAL_CONFIG_DEFAULTS,
+)
 
 
-# Keyboard Tests
+# --- Keyboard Tests ---
 @pytest.mark.parametrize("keyboard", ["de", "fr", "en-us", "es"])
 def test_keyboard_valid_patterns(keyboard):
     cfg = GlobalConfig(keyboard=keyboard)
@@ -21,16 +24,8 @@ def test_keyboard_not_in_allowed_list():
         GlobalConfig(keyboard="us")
 
 
-# Country Tests
-@pytest.mark.parametrize(
-    "country",
-    [
-        "US",
-        "DE",
-        "FR",
-        "GB",
-    ],
-)
+# --- Country Tests ---
+@pytest.mark.parametrize("country", ["US", "DE", "FR", "GB"])
 def test_country_valid_patterns(country):
     cfg = GlobalConfig(country=country)
     assert cfg.country == country
@@ -42,7 +37,7 @@ def test_country_invalid_patterns(invalid_country):
         GlobalConfig(country=invalid_country)
 
 
-# Timezone Tests
+# --- Timezone Tests ---
 @pytest.mark.parametrize(
     "timezone",
     ["America/New_York", "Europe/Berlin", "Asia/Tokyo", "Africa/Johannesburg"],
@@ -61,17 +56,12 @@ def test_timezone_invalid_patterns(invalid_timezone):
         GlobalConfig(timezone=invalid_timezone)
 
 
-def test_timezone_not_in_allowed_list(monkeypatch):
-    # Patch the tz helper to return a limited set
-    monkeypatch.setattr(
-        "safe_pc.proxmox_auto_installer.answer_file._global.ProxmoxTimezoneHelper.get_timezones",
-        lambda self: ["America/New_York"],
-    )
+def test_timezone_not_in_allowed_list():
     with pytest.raises(ValidationError):
-        GlobalConfig(timezone="Europe/Berlin")
+        GlobalConfig(timezone="East/Berlin")
 
 
-# FQDN Tests
+# --- FQDN Tests ---
 @pytest.mark.parametrize(
     "fqdn", ["proxmox.lab.local", "test.example.com", "my-server.domain.org"]
 )
@@ -96,7 +86,7 @@ def test_fqdn_invalid_patterns(invalid_fqdn):
         GlobalConfig(fqdn=invalid_fqdn)
 
 
-# Mailto Tests
+# --- Mailto Tests ---
 @pytest.mark.parametrize(
     "mailto",
     [
@@ -120,10 +110,13 @@ def test_mailto_invalid_patterns(invalid_mailto):
         GlobalConfig(mailto=invalid_mailto)
 
 
-# Root Password Hashed Tests
+# --- Root Password Hashed Tests ---
 def test_root_password_hashed_valid_pattern():
-    valid_hash = "$6$rounds=656000$12345678$" + "A" * 86
-    cfg = GlobalConfig(root_password_hashed=valid_hash, keyboard="en-us")
+    valid_hash = GLOBAL_CONFIG_DEFAULTS["root_password_hashed"]
+    cfg = GlobalConfig(
+        root_password_hashed=valid_hash,
+        keyboard=GLOBAL_CONFIG_DEFAULTS["keyboard"],
+    )
     assert cfg.root_password_hashed == valid_hash
 
 
@@ -142,34 +135,31 @@ def test_root_password_hashed_invalid_patterns(invalid_hash):
         GlobalConfig(root_password_hashed=invalid_hash)
 
 
-# Alias & Serialization Tests
+# --- Alias & Serialization Tests ---
 def test_alias_population_for_root_password():
-    valid_hash = "$6$rounds=656000$12345678$" + "A" * 86
+    valid_hash = GLOBAL_CONFIG_DEFAULTS["root_password_hashed"]
     cfg = GlobalConfig(root_password_hashed=valid_hash)
     dumped = cfg.model_dump(by_alias=True)
     assert "root-password-hashed" in dumped
     assert dumped["root-password-hashed"] == valid_hash
 
 
-# Full Valid Config
-def test_full_valid__global(monkeypatch):
-    monkeypatch.setattr(
-        "safe_pc.proxmox_auto_installer.answer_file._global.ProxmoxTimezoneHelper.get_timezones",
-        lambda self: ["America/New_York", "Europe/Berlin"],
-    )
+# --- Full Valid Config ---
+def test_full_valid__global():
+    valid_hash = GLOBAL_CONFIG_DEFAULTS["root_password_hashed"]
 
-    valid_hash = "$6$rounds=656000$12345678$" + "A" * 86
     cfg = GlobalConfig(
-        keyboard="en-us",
-        country="US",
-        timezone="America/New_York",
-        fqdn="proxmox.lab.local",
-        mailto="root@localhost",
+        keyboard=GLOBAL_CONFIG_DEFAULTS["keyboard"],
+        country=GLOBAL_CONFIG_DEFAULTS["country"],
+        timezone=GLOBAL_CONFIG_DEFAULTS["timezone"],
+        fqdn=GLOBAL_CONFIG_DEFAULTS["fqdn"],
+        mailto=GLOBAL_CONFIG_DEFAULTS["mailto"],
         root_password_hashed=valid_hash,
     )
-    assert cfg.keyboard == "en-us"
-    assert cfg.country == "US"
-    assert cfg.timezone == "America/New_York"
-    assert cfg.fqdn == "proxmox.lab.local"
-    assert cfg.mailto == "root@localhost"
+
+    assert cfg.keyboard == GLOBAL_CONFIG_DEFAULTS["keyboard"]
+    assert cfg.country == GLOBAL_CONFIG_DEFAULTS["country"]
+    assert cfg.timezone == GLOBAL_CONFIG_DEFAULTS["timezone"]
+    assert cfg.fqdn == GLOBAL_CONFIG_DEFAULTS["fqdn"]
+    assert cfg.mailto == GLOBAL_CONFIG_DEFAULTS["mailto"]
     assert cfg.root_password_hashed == valid_hash

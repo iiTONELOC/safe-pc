@@ -1,3 +1,4 @@
+from typing import Any
 from re import sub, MULTILINE
 from safe_pc.proxmox_auto_installer.answer_file.disk import DiskConfig
 from safe_pc.proxmox_auto_installer.answer_file._global import GlobalConfig
@@ -27,7 +28,7 @@ class ProxmoxAnswerFile(BaseModel):
 
     def to_dict(self) -> dict:
         # ensure none values are removed
-        def remove_none(d):
+        def remove_none(d: Any) -> Any:
             if isinstance(d, dict):
                 return {k: remove_none(v) for k, v in d.items() if v is not None}
             elif isinstance(d, list):

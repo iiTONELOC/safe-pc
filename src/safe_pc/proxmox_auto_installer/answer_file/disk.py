@@ -11,39 +11,45 @@ FILESYSTEM_PATTERN = re_compile(r"^(ext4|xfs|zfs|btrfs)$")
 BTRFS_RAID_PATTERN = re_compile(r"^(raid0|raid1|raid10)$")
 ZFS_RAID_PATTERN = re_compile(r"^(raid0|raid1|raid10|raidz-1|raidz-2|raidz-3)$")
 
+DISK_CONFIG_DEFAULTS = {
+    "filesystem": "zfs",
+    "zfs_raid": "raid0",
+    "btrfs_raid": None,
+    "disk_list": ["/dev/sda"],
+}
+
 
 class DiskConfig(BaseModel):
     model_config = {"populate_by_name": True}
 
     filesystem: str = Field(
-        default="zfs",
+        default=DISK_CONFIG_DEFAULTS["filesystem"],
         description="Filesystem type for disk setup",
         pattern=FILESYSTEM_PATTERN.pattern,
     )
 
     btrfs_raid: str | None = Field(
-        default=None,
+        default=DISK_CONFIG_DEFAULTS["btrfs_raid"],
         description="Btrfs RAID configuration (required if filesystem is btrfs)",
         alias="btrfs.raid",
         pattern=BTRFS_RAID_PATTERN.pattern,
     )
 
     zfs_raid: str | None = Field(
-        default="raid0",
+        default=DISK_CONFIG_DEFAULTS["zfs_raid"],
         description="ZFS RAID configuration (required if filesystem is zfs)",
         alias="zfs.raid",
         pattern=ZFS_RAID_PATTERN.pattern,
     )
 
     disk_list: list[str] = Field(
-        default=["/dev/sda"],
+        default=DISK_CONFIG_DEFAULTS["disk_list"],
         description="List of disks to use for installation",
         min_length=1,
         max_length=10,
         alias="disk-list",
     )
 
-    # FILESYSTEM VALIDATION
     @field_validator("filesystem", mode="before")
     def validate_filesystem_pattern(cls, value: str):
         if not FILESYSTEM_PATTERN.match(value):
@@ -56,7 +62,6 @@ class DiskConfig(BaseModel):
             raise ValueError(f"Invalid filesystem: {value}")
         return value
 
-    # RAID VALIDATION
     @field_validator("zfs_raid", mode="before")
     def validate_zfs_raid_required(cls, raid_value, values):
         fs = values.data.get("filesystem")
@@ -93,7 +98,6 @@ class DiskConfig(BaseModel):
             raise ValueError(f"Invalid btrfs_raid pattern: {value}")
         return value
 
-    # DISK LIST VALIDATION
     @field_validator("disk_list", mode="before")
     def validate_disk_list_nonempty(cls, disk_list_value: list[str]):
         if not disk_list_value:
@@ -105,6 +109,7 @@ class DiskConfig(BaseModel):
         for disk in disk_list_value:
             if not DISK_PATH_PATTERN.match(disk):
                 raise ValueError(f"Invalid disk path: {disk}")
+
         fs = values.data.get("filesystem")
         raid = None
         if fs == "zfs":

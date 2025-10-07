@@ -1,30 +1,33 @@
 import pytest
 from pydantic import ValidationError
-from safe_pc.proxmox_auto_installer.answer_file.disk import DiskConfig
+from safe_pc.proxmox_auto_installer.answer_file.disk import (
+    DiskConfig,
+    DISK_CONFIG_DEFAULTS,
+)
 
 
+# --- Defaults ---
 def test_disk_defaults():
     cfg = DiskConfig()
-    assert cfg.filesystem == "zfs"
-    assert cfg.zfs_raid == "raid0"
-    assert cfg.btrfs_raid is None
-    assert cfg.disk_list == ["/dev/sda"]
+    assert cfg.filesystem == DISK_CONFIG_DEFAULTS["filesystem"]
+    assert cfg.zfs_raid == DISK_CONFIG_DEFAULTS["zfs_raid"]
+    assert cfg.btrfs_raid == DISK_CONFIG_DEFAULTS["btrfs_raid"]
+    assert cfg.disk_list == DISK_CONFIG_DEFAULTS["disk_list"]
 
 
-# Filesystem Tests
-def test_filesystem_xfs_ext4_btrfs_valid():
-    for fs in ["ext4", "xfs", "btrfs"]:
-        cfg = DiskConfig(filesystem=fs, disk_list=["/dev/sda"])
-        assert cfg.filesystem == fs
+# --- Filesystem Tests ---
+@pytest.mark.parametrize("fs", ["ext4", "xfs", "btrfs"])
+def test_filesystem_xfs_ext4_btrfs_valid(fs):
+    cfg = DiskConfig(filesystem=fs, disk_list=["/dev/sda"])
+    assert cfg.filesystem == fs
 
 
 def test_filesystem_invalid_pattern():
-    # Pattern-level regex validation
     with pytest.raises(ValidationError):
         DiskConfig(filesystem="1234")
 
 
-# ZFS RAID Tests
+# --- ZFS RAID Tests ---
 @pytest.mark.parametrize(
     "raid,disk_count",
     [
@@ -38,11 +41,7 @@ def test_filesystem_invalid_pattern():
 )
 def test_zfs_raid_valid_patterns(raid, disk_count):
     disks = [f"/dev/sd{i}" for i in range(disk_count)]
-    cfg = DiskConfig(
-        filesystem="zfs",
-        zfs_raid=raid,
-        disk_list=disks,
-    )
+    cfg = DiskConfig(filesystem="zfs", zfs_raid=raid, disk_list=disks)
     assert cfg.zfs_raid == raid
 
 
@@ -65,7 +64,7 @@ def test_zfs_raid_disk_count_enforcement():
         DiskConfig(filesystem="zfs", zfs_raid="raidz-3", disk_list=["/dev/sda"] * 4)
 
 
-# Btrfs RAID Tests
+# --- Btrfs RAID Tests ---
 @pytest.mark.parametrize(
     "raid,disk_count",
     [
@@ -95,22 +94,23 @@ def test_btrfs_raid_disk_count_enforcement():
         DiskConfig(filesystem="btrfs", btrfs_raid="raid10", disk_list=["/dev/sda"])
 
 
-# Disk List Edge Cases
-def test_disk_list_invalid_path_format():
-    invalid_paths = ["dev/sda", "/sdX", "///dev/sda", "/dev/", "/dev//sda"]
-    for path in invalid_paths:
-        with pytest.raises(ValidationError):
-            DiskConfig(disk_list=[path])
-
-
-def test_disk_list_non_string_items():
+# --- Disk List Edge Cases ---
+@pytest.mark.parametrize(
+    "invalid_path",
+    ["dev/sda", "/sdX", "///dev/sda", "/dev/", "/dev//sda"],
+)
+def test_disk_list_invalid_path_format(invalid_path):
     with pytest.raises(ValidationError):
-        DiskConfig(disk_list=[123])
+        DiskConfig(disk_list=[invalid_path])
+
+
+@pytest.mark.parametrize("non_str_item", [123, None])
+def test_disk_list_non_string_items(non_str_item):
     with pytest.raises(ValidationError):
-        DiskConfig(disk_list=[None])
+        DiskConfig(disk_list=[non_str_item])
 
 
-# Alias & Name Population Tests
+# --- Alias & Name Population Tests ---
 def test_alias_population_for_zfs_raid():
     cfg = DiskConfig(
         filesystem="zfs", zfs_raid="raid1", disk_list=["/dev/sda", "/dev/sdb"]
@@ -129,9 +129,8 @@ def test_alias_population_for_btrfs_raid():
     assert dumped["btrfs.raid"] == "raid1"
 
 
-# Mixed Scenario Tests
+# --- Mixed Scenario Tests ---
 def test_zfs_raid_ignored_when_btrfs():
-    # Should accept zfs_raid=None when btrfs
     cfg = DiskConfig(
         filesystem="btrfs",
         btrfs_raid="raid1",

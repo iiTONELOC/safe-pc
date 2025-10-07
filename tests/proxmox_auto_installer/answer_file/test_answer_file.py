@@ -1,21 +1,30 @@
-import pytest
 import re
+import pytest
 from pydantic import ValidationError
-from safe_pc.proxmox_auto_installer.answer_file.disk import DiskConfig
-from safe_pc.proxmox_auto_installer.answer_file._global import GlobalConfig
-from safe_pc.proxmox_auto_installer.answer_file.network import NetworkConfig
+from safe_pc.proxmox_auto_installer.answer_file._global import (
+    GlobalConfig,
+    GLOBAL_CONFIG_DEFAULTS,
+)
+from safe_pc.proxmox_auto_installer.answer_file.network import (
+    NetworkConfig,
+    NETWORK_CONFIG_DEFAULTS,
+)
+from safe_pc.proxmox_auto_installer.answer_file.disk import (
+    DiskConfig,
+    DISK_CONFIG_DEFAULTS,
+)
 from safe_pc.proxmox_auto_installer.answer_file.answer_file import ProxmoxAnswerFile
 
 
 @pytest.fixture
 def valid_global_config():
     return GlobalConfig(
-        keyboard="en-us",
-        country="US",
-        timezone="America/New_York",
-        fqdn="proxmox.lab.local",
-        mailto="root@localhost",
-        root_password_hashed="$6$rounds=656000$12345678$" + "A" * 86,
+        keyboard=GLOBAL_CONFIG_DEFAULTS["keyboard"],
+        country=GLOBAL_CONFIG_DEFAULTS["country"],
+        timezone=GLOBAL_CONFIG_DEFAULTS["timezone"],
+        fqdn=GLOBAL_CONFIG_DEFAULTS["fqdn"],
+        mailto=GLOBAL_CONFIG_DEFAULTS["mailto"],
+        root_password_hashed=GLOBAL_CONFIG_DEFAULTS["root_password_hashed"],
     )
 
 
@@ -26,7 +35,7 @@ def valid_network_config():
         interface="eth0",
         cidr="192.168.1.10/24",
         gateway="192.168.1.1",
-        dns_server="8.8.8.8",
+        dns="8.8.8.8",
     )
 
 
@@ -35,6 +44,7 @@ def valid_disk_config():
     return DiskConfig(filesystem="ext4", disk_list=["/dev/sda"])
 
 
+# --- Core Tests ---
 def test_full_valid_answer_file(
     valid_global_config, valid_network_config, valid_disk_config
 ):
@@ -45,12 +55,10 @@ def test_full_valid_answer_file(
     )
     serialized = answer_file.to_dict()
 
-    # alias keys should appear
-    assert "global" in serialized
-    assert "disk-setup" in serialized
-    assert "network" in serialized
+    # Check top-level keys
+    assert set(serialized.keys()) == {"global", "network", "disk-setup"}
 
-    # round trip TOML should contain non-quoted keys
+    # TOML serialization: keys should not be quoted
     toml_str = answer_file.to_toml_str()
     assert not re.search(r'^".*"\s*=', toml_str, flags=re.MULTILINE)
 
@@ -63,6 +71,7 @@ def test_to_json_and_pretty_json(
         network=valid_network_config,
         disk_setup=valid_disk_config,
     )
+
     json_str = answer_file.to_json()
     pretty_json_str = answer_file.to_pretty_json()
 
@@ -80,4 +89,28 @@ def test_invalid_missing_fields_raises_error(valid_network_config, valid_disk_co
         )
 
 
-#  TODO: Add more tests
+def test_default_answer_file_creation():
+    answer_file = ProxmoxAnswerFile(
+        global_config=GlobalConfig(),
+        network=NetworkConfig(),
+        disk_setup=DiskConfig(),
+    )
+
+    g = answer_file.global_config
+    assert g.keyboard == GLOBAL_CONFIG_DEFAULTS["keyboard"]
+    assert g.country == GLOBAL_CONFIG_DEFAULTS["country"]
+    assert g.timezone == GLOBAL_CONFIG_DEFAULTS["timezone"]
+    assert g.fqdn == GLOBAL_CONFIG_DEFAULTS["fqdn"]
+    assert g.mailto == GLOBAL_CONFIG_DEFAULTS["mailto"]
+    assert g.root_password_hashed == GLOBAL_CONFIG_DEFAULTS["root_password_hashed"]
+
+    n = answer_file.network
+    assert n.source == NETWORK_CONFIG_DEFAULTS["source"]
+    assert n.cidr == NETWORK_CONFIG_DEFAULTS["cidr"]
+    assert n.gateway == NETWORK_CONFIG_DEFAULTS["gateway"]
+    assert n.dns == NETWORK_CONFIG_DEFAULTS["dns"]
+
+    d = answer_file.disk_setup
+    assert d.filesystem == DISK_CONFIG_DEFAULTS["filesystem"]
+    assert d.disk_list == DISK_CONFIG_DEFAULTS["disk_list"]
+    assert d.zfs_raid == DISK_CONFIG_DEFAULTS["zfs_raid"]
