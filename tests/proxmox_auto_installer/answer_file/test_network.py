@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from safe_pc.proxmox_auto_installer.answer_file.network import (
+from safe_pc.proxmox_auto_installer.answer_file import (
     NetworkConfig,
     NETWORK_CONFIG_DEFAULTS,
 )

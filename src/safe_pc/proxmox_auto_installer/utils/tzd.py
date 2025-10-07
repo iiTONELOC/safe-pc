@@ -1,10 +1,9 @@
-import json
 import urllib.request as requests
 from pathlib import Path
 from locale import getlocale
 
 
-from safe_pc.proxmox_auto_installer.utils.country_codes import _get_country_codes
+from safe_pc.proxmox_auto_installer.utils.country_codes import ProxmoxCountryCodeHelper
 
 TZ_FILE = Path(__file__).parent / "tzs.txt"
 
@@ -43,10 +42,10 @@ class ProxmoxTimezoneHelper:
         """
         self._ensure_initialized()
         loc = getlocale()
-        codes = _get_country_codes()
+        code_dict = ProxmoxCountryCodeHelper().get_country_codes()
         if loc and loc[0]:
             country_code = loc[0].split("_")[-1]
-            return codes.get(country_code, "US")
+            return code_dict.get(country_code, "US")
 
         return "US"
 

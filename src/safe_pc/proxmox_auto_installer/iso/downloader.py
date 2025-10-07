@@ -9,9 +9,8 @@ from typing import Callable
 from httpx import AsyncClient
 from logging import getLogger
 
-from safe_pc.utils.utils import IS_TESTING
-from safe_pc.utils.crypto.crypto import compute_sha256
-from safe_pc.proxmox_auto_installer.utils.download import handle_download
+from safe_pc.utils import IS_TESTING, compute_sha256
+from safe_pc.proxmox_auto_installer.utils import handle_download
 
 from bs4 import BeautifulSoup
 

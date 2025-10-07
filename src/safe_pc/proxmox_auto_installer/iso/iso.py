@@ -4,9 +4,7 @@ from logging import getLogger
 from datetime import datetime
 
 from safe_pc.proxmox_auto_installer.answer_file.answer_file import ProxmoxAnswerFile
-from safe_pc.utils.logs import setup_logging
-from safe_pc.utils.crypto.crypto import verify_sha256
-from safe_pc.utils.utils import handle_keyboard_interrupt
+from safe_pc.utils import setup_logging, verify_sha256, handle_keyboard_interrupt
 from safe_pc.proxmox_auto_installer.iso.downloader import (
     validate_iso_url,
     need_to_download,

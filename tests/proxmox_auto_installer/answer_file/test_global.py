@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from safe_pc.proxmox_auto_installer.answer_file._global import (
+from safe_pc.proxmox_auto_installer.answer_file import (
     GlobalConfig,
     GLOBAL_CONFIG_DEFAULTS,
 )

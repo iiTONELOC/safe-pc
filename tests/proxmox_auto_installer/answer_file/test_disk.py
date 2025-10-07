@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from safe_pc.proxmox_auto_installer.answer_file.disk import (
+from safe_pc.proxmox_auto_installer.answer_file import (
     DiskConfig,
     DISK_CONFIG_DEFAULTS,
 )

@@ -1,19 +1,15 @@
 import re
 import pytest
 from pydantic import ValidationError
-from safe_pc.proxmox_auto_installer.answer_file._global import (
+from safe_pc.proxmox_auto_installer.answer_file import (
+    DiskConfig,
     GlobalConfig,
-    GLOBAL_CONFIG_DEFAULTS,
-)
-from safe_pc.proxmox_auto_installer.answer_file.network import (
     NetworkConfig,
+    ProxmoxAnswerFile,
+    DISK_CONFIG_DEFAULTS,
+    GLOBAL_CONFIG_DEFAULTS,
     NETWORK_CONFIG_DEFAULTS,
 )
-from safe_pc.proxmox_auto_installer.answer_file.disk import (
-    DiskConfig,
-    DISK_CONFIG_DEFAULTS,
-)
-from safe_pc.proxmox_auto_installer.answer_file.answer_file import ProxmoxAnswerFile
 
 
 @pytest.fixture

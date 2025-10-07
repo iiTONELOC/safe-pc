@@ -4,6 +4,7 @@ from safe_pc.proxmox_auto_installer.utils.country_codes import ProxmoxCountryCod
 
 
 def installer_data():
+    """Get the data required for the installer settings page."""
     tz_helper = ProxmoxTimezoneHelper()
     cc_helper = ProxmoxCountryCodeHelper()
     # need to grab some data for the front end

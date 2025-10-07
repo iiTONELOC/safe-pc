@@ -2,10 +2,13 @@ from asyncio import run
 from pathlib import Path
 from sys import exit, argv
 
-from safe_pc.utils.crypto.temp_key_file import TempKeyFile
-from safe_pc.utils.crypto.dpapi import read_dpapi_protected_key
-from safe_pc.proxmox_auto_installer.utils.jwt import jwt_middleware
-from safe_pc.utils.utils import get_local_ip, handle_keyboard_interrupt
+from safe_pc.utils import (
+    TempKeyFile,
+    get_local_ip,
+    read_dpapi_protected_key,
+    handle_keyboard_interrupt,
+)
+from safe_pc.proxmox_auto_installer.utils import jwt_middleware
 from safe_pc.proxmox_auto_installer.back_end.routes.routes import PiRoutes
 
 from fastapi import FastAPI
