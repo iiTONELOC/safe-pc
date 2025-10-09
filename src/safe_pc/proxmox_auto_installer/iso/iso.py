@@ -1,9 +1,11 @@
 from pathlib import Path
 from typing import Callable
 from logging import getLogger
-from datetime import datetime
+
 
 from safe_pc.proxmox_auto_installer.answer_file.answer_file import ProxmoxAnswerFile
+from safe_pc.proxmox_auto_installer.iso.extractor import unpack_iso_7z
+from safe_pc.proxmox_auto_installer.iso.helpers import modify_iso
 from safe_pc.utils import setup_logging, verify_sha256, handle_keyboard_interrupt
 from safe_pc.proxmox_auto_installer.iso.downloader import (
     validate_iso_url,
@@ -90,15 +92,28 @@ class ModifiedProxmoxISO:
     ) -> None:
         self.base_iso = base_iso
         self.modified_iso_path = modified_iso_path or base_iso.iso_path.with_name(
-            f"{base_iso.iso_path.stem}-modified-{datetime.now().strftime("%Y%m%d%H%M%S")}{base_iso.iso_path.suffix}"
+            f"{base_iso.iso_path.stem}-copy-{base_iso.iso_path.suffix}"
         )
+        self.extracted_iso_dir = base_iso.iso_dir / "extracted"
+        self.extracted_ram_disk = (
+            self.extracted_iso_dir / "extracted_ram_disk" / "initrd.img"
+        )
+        self.repacked_ram_disk = (
+            self.extracted_iso_dir / "repacked_ram_disk" / "initrd.img"
+        )
+        self.repacked_iso_dir = base_iso.iso_dir / "repacked"
 
-    async def create_modified_iso(
-        self, answer_file: ProxmoxAnswerFile | None = None
-    ) -> None:
+        for path in [
+            self.repacked_iso_dir,
+            self.extracted_iso_dir,
+            self.extracted_ram_disk.parent,
+            self.repacked_ram_disk.parent,
+        ]:
+            path.mkdir(parents=True, exist_ok=True)
+
+    async def create_modified_iso(self, answer_file: ProxmoxAnswerFile) -> None:
         """Placeholder for ISO modification logic."""
-        # TODO: Implement ISO modification logic here
-        print("Modifying ISO... (not yet implemented)")
+        await modify_iso(self, answer_file)
 
 
 async def run():

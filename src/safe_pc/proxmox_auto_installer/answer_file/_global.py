@@ -14,7 +14,7 @@ FQDN_PATTERN = re_compile(
     r"^([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$"
 )
 HASHED_PASSWORD_PATTERN = re_compile(
-    r"^\$6\$rounds=\d{6}\$[./A-Za-z0-9]{8}\$[./A-Za-z0-9]{86}$"
+    r"^\$6\$rounds=\d{6}\$[./A-Za-z0-9]{1,16}\$[./A-Za-z0-9]{86}$"
 )
 EMAIL_OR_LOCALHOST_PATTERN = re_compile(
     r"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)|^(root|admin|user)@localhost$"

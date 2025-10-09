@@ -1,12 +1,14 @@
-from safe_pc.proxmox_auto_installer.back_end.routes.api.installer.data import (
-    installer_data,
+import json
+from logging import getLogger
+from safe_pc.proxmox_auto_installer.back_end.iso_jobs import get_job, send_socket_update
+from safe_pc.proxmox_auto_installer.back_end.routes.api.installer import (
+    get_installer_data,
+    post_installer_iso,
 )
-from safe_pc.proxmox_auto_installer.back_end.routes.api.installer.iso import (
-    installer_iso,
-)
-
-from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+
+LOGGER = getLogger("safe_pc.proxmox_auto_installer.routes.api")
 
 
 class APIRoutes:
@@ -19,9 +21,41 @@ class APIRoutes:
     ):
         # return a 200 hello work json response for testing
         @app.get(path="/api/installer/data")
-        def installer_data_route():
-            return installer_data()
+        def get_installer_data_route():
+            return get_installer_data()
 
         @app.post(path="/api/installer/iso")
         async def installer_iso_route(request: Request):
-            return await installer_iso(request)
+            return await post_installer_iso(request)
+
+        # websocket route for job status updates
+        @app.websocket("/api/ws/iso")
+        async def installer_iso_ws_route(websocket: WebSocket):
+
+            await websocket.accept()
+            data = await websocket.receive_text()
+            msg = json.loads(data)
+            job_id = msg.get("jobId", None)
+            LOGGER.info(f"WebSocket connection request for job {job_id}")
+            job = get_job(job_id)
+            if not job or job._socket is not None:
+                await websocket.close(code=1008)
+                return
+            job.attach_socket(websocket)
+            await send_socket_update(
+                job._socket,
+                {
+                    "data": {
+                        "type": "progress",
+                        "progress": job.install_progress,
+                        "status": job.status,
+                    }
+                },
+            )
+
+            try:
+                while True:
+                    await websocket.receive_text()
+            except WebSocketDisconnect:
+                LOGGER.info(f"WebSocket disconnected for job {job_id}")
+                job.detach_socket()

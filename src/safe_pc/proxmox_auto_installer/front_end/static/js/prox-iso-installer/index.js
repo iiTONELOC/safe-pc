@@ -13,10 +13,10 @@ import {
   confirmPasswordValidator,
   handleSubmitBtnDisabledState,
 } from "./validators.js";
+import { createIso } from "./createIso.js";
+import { fetchInstallerData } from "../api.js";
 import { formElements } from "./formElements.js";
-import { hashPassword } from "../utils/crypto.js";
 import { formState, passwordValidated } from "./formState.js";
-import { fetchInstallerData, handleCreateIso } from "../api.js";
 import { show, hide, disableSubmitButton } from "../utils/dom.js";
 
 // start fetching installer data immediately don't wait for DOMContentLoaded
@@ -48,6 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     submitBtn,
     emailInput,
     emailError,
+    spinnerText,
     createIsoBtn,
     sourceSelect,
     gatewayError,
@@ -79,12 +80,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   formState.network.cidr = cidr.value || null;
   formState.network.source = sourceSelect.value;
   formState.network.gateway = gateway.value || null;
-  formState.global.rootPassword = null;
+  formState.global["root-password-hashed"] = null;
   formState.global.fqdn = fqdnInput.value || null;
   formState.global.email = emailInput.value || null;
   formState.global.country = countrySelect.value || null;
   formState.global.timezone = timezoneSelect.value || null;
-  formState.global.keyboardLayout = keyboardSelect.value || null;
+  formState.global.keyboard = keyboardSelect.value || null;
 
   // attach event listeners to form elements to handle validation and state updates
   for (const event of ["input", "change"]) {
@@ -176,7 +177,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // set the passwords back to empty
     passwordInput.value = "";
     passwordConfirmInput.value = "";
-    formState.global.rootPassword = null;
+    formState.global["root-password-hashed"] = null;
     passwordValidated.isPasswordValid = false;
     passwordValidated.isPasswordConfirmed = false;
   });
@@ -202,18 +203,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     disableSubmitButton(submitBtn);
     // display loading spinner
     show(loadingSpinner);
-    // hash the password and store in form state
-    formState.global.rootPassword = await hashPassword(
-      passwordInput.value.trim()
+
+    await createIso(
+      formState,
+      loadingSpinner,
+      submitBtn,
+      closeBtn,
+      spinnerText,
+      hide
     );
-    // submit the form
-    console.log("Submitting form with state:", formState);
-    const result = await handleCreateIso(formState);
-    //TODO: handle errors - currently this api isn't expected to fail as its not implemented yet
-    // hide the spinner
-    hide(loadingSpinner);
-    // re-enable the submit button
-    submitBtn.disabled = false;
-    closeBtn.click();
   });
 });

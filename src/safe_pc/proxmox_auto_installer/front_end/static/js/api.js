@@ -25,7 +25,11 @@ export const handleCreateIso = async (formState) => {
       },
     });
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(
+        `HTTP error! status: ${
+          response.status
+        }, message: ${await response.text()}`
+      );
     } else return await response.json();
   } catch (error) {
     console.error("Error creating ISO:", error);

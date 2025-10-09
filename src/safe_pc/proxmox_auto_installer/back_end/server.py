@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 
+
 load_dotenv()
 
 _CURRENT_DIR = Path(__file__).resolve().parent

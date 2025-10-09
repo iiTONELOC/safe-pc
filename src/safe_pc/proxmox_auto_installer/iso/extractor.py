@@ -1,3 +1,4 @@
+import glob
 from pathlib import Path
 from logging import getLogger
 from asyncio import create_subprocess_exec, subprocess
@@ -27,7 +28,7 @@ async def unpack_iso_7z(iso_path: Path, dest_path: Path) -> None:
     dest_path.mkdir(parents=True, exist_ok=True)
 
     process = await create_subprocess_exec(
-        "7z",
+        r"C:\Program Files\7-Zip\7z.exe",
         "x",
         str(iso_path),
         f"-o{str(dest_path)}",
@@ -41,28 +42,23 @@ async def unpack_iso_7z(iso_path: Path, dest_path: Path) -> None:
 
 
 async def repack_iso_7z(source_dir: Path, output_iso: Path) -> None:
-    """
-    Repackages the contents of a directory into an ISO file using 7z.
-
-    Args:
-        source_dir (Path): The directory containing the files to be packaged into an ISO.
-        output_iso (Path): The path where the resulting ISO file will be saved.
-
-    Raises:
-        FileNotFoundError: If the source directory does not exist.
-        RuntimeError: If the repackaging fails.
-    """
     if not source_dir.exists() or not source_dir.is_dir():
         raise FileNotFoundError(
             f"Source directory not found or is not a directory: {source_dir}"
         )
 
+    # Expand files manually
+    files = glob.glob(str(source_dir / "*"))
+
+    if not files:
+        raise RuntimeError(f"No files found to pack in {source_dir}")
+
     process = await create_subprocess_exec(
-        "7z",
+        r"C:\Program Files\7-Zip\7z.exe",
         "a",
         "-tiso",
         str(output_iso),
-        str(source_dir / "*"),
+        *files,  # <-- expanded list
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )

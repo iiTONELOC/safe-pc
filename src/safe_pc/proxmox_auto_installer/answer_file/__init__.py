@@ -1,4 +1,7 @@
-from safe_pc.proxmox_auto_installer.answer_file.answer_file import ProxmoxAnswerFile
+from safe_pc.proxmox_auto_installer.answer_file.answer_file import (
+    ProxmoxAnswerFile,
+    create_answer_file_from_dict,
+)
 from safe_pc.proxmox_auto_installer.answer_file.disk import (
     DiskConfig,
     DISK_CONFIG_DEFAULTS,
@@ -20,4 +23,5 @@ __all__ = [
     "DISK_CONFIG_DEFAULTS",
     "GLOBAL_CONFIG_DEFAULTS",
     "NETWORK_CONFIG_DEFAULTS",
+    "create_answer_file_from_dict",
 ]

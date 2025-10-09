@@ -1,24 +1,24 @@
-export const showAlert = (message) => {
+export function showAlert(message, type = "error") {
   const alertBox = document.getElementById("form-alert");
-  const alertMessage = alertBox.querySelector(".alert-message");
+  const alertMessage = alertBox.querySelector("#alert-message");
   alertMessage.textContent = message;
   alertBox.classList.remove("hidden");
-  // Automatically hide the alert after 5 seconds
+  // Automatically hide the alert after 6.5 seconds
   setTimeout(() => {
     alertBox.classList.add("hidden");
-  }, 5000);
-};
+  }, 6500);
+}
 
-export const hideAlert = () => {
+export function hideAlert() {
   const alertBox = document.getElementById("form-alert");
   alertBox.classList.add("hidden");
-};
+}
 
-export const updateAlertMessage = (message) => {
+export function updateAlertMessage(message) {
   const alertBox = document.getElementById("form-alert");
   const alertMessage = alertBox.querySelector(".alert-message");
   alertMessage.textContent = message;
-};
+}
 
 // Initialize alert close button functionality
 document.addEventListener("DOMContentLoaded", () => {

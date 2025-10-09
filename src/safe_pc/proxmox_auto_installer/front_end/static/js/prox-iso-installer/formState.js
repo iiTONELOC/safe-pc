@@ -9,8 +9,8 @@ export const formState = {
     email: null,
     country: null,
     timezone: null,
-    rootPassword: null,
-    keyboardLayout: null,
+    "root-password-hashed": null,
+    keyboard: null,
   },
   network: {
     dns: null,

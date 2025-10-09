@@ -35,21 +35,21 @@ export const passwordValidator = (
     passwordConfirmError.textContent = "";
     passwordValidated.isPasswordConfirmed = false;
     passwordValidated.isPasswordValid = false;
-    formState.global.rootPassword = null;
+    formState.global["root-password-hashed"] = null;
   } else if (value.length >= 12 && !passwordHasEnoughEntropy(value)) {
     passwordError.textContent = "Low entropy password detected!";
     passwordConfirmError.textContent = "";
     passwordValidated.isPasswordConfirmed = false;
     passwordValidated.isPasswordValid = false;
-    formState.global.rootPassword = null;
+    formState.global["root-password-hashed"] = null;
   } else if (value.length === 0) {
     passwordError.textContent = "";
     passwordValidated.isPasswordValid = false;
-    formState.global.rootPassword = null;
+    formState.global["root-password-hashed"] = null;
   } else {
     passwordError.textContent = "";
     passwordValidated.isPasswordValid = true;
-    formState.global.rootPassword = value;
+    formState.global["root-password-hashed"] = value;
   }
 };
 
@@ -62,17 +62,17 @@ export const confirmPasswordValidator = (
 ) => {
   if (!passwordValidated.isPasswordValid) {
     passwordValidated.isPasswordConfirmed = false;
-    formState.global.rootPassword = null;
+    formState.global["root-password-hashed"] = null;
     return;
   }
   if (passwordConfirmInput.value !== passwordInput.value) {
     passwordConfirmError.textContent = "Passwords do not match!";
     passwordValidated.isPasswordConfirmed = false;
-    formState.global.rootPassword = null;
+    formState.global["root-password-hashed"] = null;
   } else {
     passwordConfirmError.textContent = "";
     passwordValidated.isPasswordConfirmed = true;
-    formState.global.rootPassword = passwordInput.value;
+    formState.global["root-password-hashed"] = passwordInput.value;
   }
 };
 

@@ -132,11 +132,14 @@ async def jwt_middleware(request, call_next):
 
             # if the token is not valid or is expired, (should not be expired) reject the request
             if not isValid or isExpired:
+                print("Invalid or expired JWT token.")
                 return JSONResponse(
                     status_code=401, content={"detail": "Invalid token"}
                 )
 
         except Exception as _:
+            print("No JWT provided in request:", _)
+
             return JSONResponse(status_code=401, content={"detail": "Invalid token"})
     else:
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})

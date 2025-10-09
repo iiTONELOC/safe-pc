@@ -118,6 +118,11 @@ const elementMap = () => [
     varName: "sourceSelect",
     element: document.getElementById("source"),
   },
+  {
+    id: "spinner-text",
+    varName: "spinnerText",
+    element: document.getElementById("spinner-text"),
+  },
 ];
 
 const formElements = () => {

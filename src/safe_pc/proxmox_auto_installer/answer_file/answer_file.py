@@ -1,8 +1,17 @@
 from typing import Any
 from re import sub, MULTILINE
-from safe_pc.proxmox_auto_installer.answer_file.disk import DiskConfig
-from safe_pc.proxmox_auto_installer.answer_file._global import GlobalConfig
-from safe_pc.proxmox_auto_installer.answer_file.network import NetworkConfig
+from safe_pc.proxmox_auto_installer.answer_file.disk import (
+    DISK_CONFIG_DEFAULTS,
+    DiskConfig,
+)
+from safe_pc.proxmox_auto_installer.answer_file._global import (
+    GLOBAL_CONFIG_DEFAULTS,
+    GlobalConfig,
+)
+from safe_pc.proxmox_auto_installer.answer_file.network import (
+    NETWORK_CONFIG_DEFAULTS,
+    NetworkConfig,
+)
 
 from pydantic import BaseModel, Field
 from tomlkit import dumps as toml_dumps
@@ -49,3 +58,16 @@ class ProxmoxAnswerFile(BaseModel):
         # ensure keys are not quoted
         toml_str = sub(r'^"([^"]+)"\s*=', r"\1 =", toml_str, flags=MULTILINE)
         return toml_str
+
+
+def create_answer_file_from_dict(data: dict) -> ProxmoxAnswerFile:
+    args = {
+        **{
+            "global": GLOBAL_CONFIG_DEFAULTS,
+            "network": NETWORK_CONFIG_DEFAULTS,
+            "disk-setup": DISK_CONFIG_DEFAULTS,
+        },
+        **data,
+    }
+
+    return ProxmoxAnswerFile.model_validate(args)
