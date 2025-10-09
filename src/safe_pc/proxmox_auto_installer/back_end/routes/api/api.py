@@ -37,18 +37,24 @@ class APIRoutes:
             msg = json.loads(data)
             job_id = msg.get("jobId", None)
             LOGGER.info(f"WebSocket connection request for job {job_id}")
-            job = get_job(job_id)
+            job = await get_job(job_id)
+            LOGGER.info(f"Found job: {job}")
             if not job or job._socket is not None:
                 await websocket.close(code=1008)
                 return
-            job.attach_socket(websocket)
+            LOGGER.info(f"Attaching socket to job {job_id}")
+            await job.attach_socket(websocket)
+            LOGGER.info(
+                f"Job {job_id} status: {job.status}, progress: {job.install_progress}"
+            )
             await send_socket_update(
-                job._socket,
+                websocket,
                 {
                     "data": {
                         "type": "progress",
                         "progress": job.install_progress,
                         "status": job.status,
+                        "message": f"Job {job.job_id} reattached or initialized",
                     }
                 },
             )
@@ -58,4 +64,4 @@ class APIRoutes:
                     await websocket.receive_text()
             except WebSocketDisconnect:
                 LOGGER.info(f"WebSocket disconnected for job {job_id}")
-                job.detach_socket()
+                await job.detach_socket()

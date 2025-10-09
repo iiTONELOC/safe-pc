@@ -70,4 +70,6 @@ def create_answer_file_from_dict(data: dict) -> ProxmoxAnswerFile:
         **data,
     }
 
-    return ProxmoxAnswerFile.model_validate(args)
+    ans = ProxmoxAnswerFile.model_validate(args)
+
+    return ans

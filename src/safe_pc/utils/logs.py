@@ -76,11 +76,7 @@ def setup_logging(level: int = INFO, log_file: str = "safe_pc") -> Logger:
     root.addHandler(file_handler)
     root.addHandler(stream_handler)
 
-    root.info(
-        f" Logging initialized. Log file: ./{Path(log_path).relative_to(Path.cwd())} ".center(
-            80, "*"
-        )
-    )
+    root.info(f" Logging initialized. Log file: ./{Path(log_path)} ".center(80, "*"))
 
     _configured = True
     return getLogger(log_file)

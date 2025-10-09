@@ -204,13 +204,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     // display loading spinner
     show(loadingSpinner);
 
-    await createIso(
-      formState,
-      loadingSpinner,
-      submitBtn,
-      closeBtn,
-      spinnerText,
-      hide
-    );
+    await createIso(formState, loadingSpinner, submitBtn, closeBtn, hide);
   });
 });

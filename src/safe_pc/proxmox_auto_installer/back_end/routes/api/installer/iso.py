@@ -1,3 +1,4 @@
+import asyncio
 import json
 from logging import getLogger
 from fastapi import Request
@@ -13,8 +14,8 @@ from safe_pc.proxmox_auto_installer.back_end.iso_jobs import Job, below_max_jobs
 LOGGER = getLogger("safe_pc.proxmox_auto_installer.routes.api.installer.iso")
 
 
-def check_max_jobs():
-    if not below_max_jobs():
+async def check_max_jobs():
+    if not await below_max_jobs():
         return JSONResponse(
             content={"error": "Maximum number of concurrent jobs reached."},
             status_code=429,
@@ -26,7 +27,7 @@ async def post_installer_iso(request: Request) -> JSONResponse:
 
     try:
         # ensure we are below the max job limit
-        resp = check_max_jobs()
+        resp = await check_max_jobs()
         if resp:
             return resp
 
@@ -43,14 +44,16 @@ async def post_installer_iso(request: Request) -> JSONResponse:
         )
         answer_file: ProxmoxAnswerFile = create_answer_file_from_dict(data)
 
-        resp = check_max_jobs()
+        resp = await check_max_jobs()
         if resp:
             return resp
 
         # Create a new job for ISO creation
-        job = Job(info=answer_file.to_json())
+        job = Job(info=answer_file.to_toml_str())
+        LOGGER.info(f"Created job with ID: {job.job_id}, starting ISO creation...")
         # Start the ISO creation job in a new thread
-        job.start()
+        await job.start()
+
         # send the job id back to the client
         return JSONResponse(
             {"status": "Created", "jobId": str(job.job_id)}, status_code=201

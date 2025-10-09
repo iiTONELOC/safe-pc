@@ -18,6 +18,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 
+from safe_pc.utils.logs import setup_logging
+
 
 load_dotenv()
 
@@ -111,6 +113,7 @@ class PiServer:
         Raises:
             Exception: If an error occurs during server startup, prints the error and exits the process with code 1.
         """
+        setup_logging()
         cert_dir = Path(__file__).resolve().parents[4] / "certs"
         with TempKeyFile(
             read_dpapi_protected_key(cert_dir / "safe-pc-key.pem")
@@ -146,6 +149,7 @@ def main_dev():
     """
     Entry point for running the server in development mode with hot-reloading.
     """
+
     run(main=PiServer.run(dev=True))
 
 

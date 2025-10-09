@@ -2,15 +2,28 @@
   id="loading-spinner"
   class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[60]"
 >
-  <div class="flex flex-col items-center gap-4">
+  <div class="flex flex-col items-center gap-6 text-center">
     <!-- Spinner -->
     <div
-      class="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin shadow-lg"
+      class="w-14 h-14 border-4 border-sky-500 border-t-transparent rounded-full animate-spin shadow-lg"
     ></div>
 
-    <!-- Loading text -->
-    <p id="spinner-text" class="text-sky-400 font-semibold tracking-wide">
-      Processing...
-    </p>
+    <!-- Status Block -->
+    <div class="flex flex-col items-center space-y-1">
+      <p
+        id="spinner-status"
+        class="text-sky-400 font-semibold tracking-wide text-lg"
+      >
+        Processing...
+      </p>
+      <span
+        id="spinner-message"
+        class="block text-sm text-sky-300 max-w-xs leading-snug"
+      ></span>
+      <span
+        id="spinner-progress"
+        class="block text-sm text-sky-300 font-mono"
+      ></span>
+    </div>
   </div>
 </div>

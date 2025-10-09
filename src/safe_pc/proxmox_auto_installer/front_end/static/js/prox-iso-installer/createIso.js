@@ -3,88 +3,136 @@ export async function createIso(
   loadingSpinner,
   submitBtn,
   closeBtn,
-  spinnerText,
   hide
 ) {
   const [{ showAlert }, { handleCreateIso }] = await Promise.all([
     import("../utils/alert.js"),
     import("../api.js"),
   ]);
-  // submit the form
-  const result = await handleCreateIso(formState).catch((error) => {
-    console.error("Error creating ISO:", error);
-    return { success: false, message: error.message || "Unknown error" };
-  });
 
-  if (!result?.status) {
-    showAlert(result.error || "Error creating ISO");
+  const spinnerStatus = document.getElementById("spinner-status");
+  const spinnerProgress = document.getElementById("spinner-progress");
+  const spinnerMessage = document.getElementById("spinner-message");
+
+  /**
+   * Handle WebSocket messages from the server.
+   */
+  const handleSocketMessage = (event) => {
+    try {
+      const payload = JSON.parse(event.data);
+      const data = payload.data || {};
+
+      switch (data.type) {
+        case "progress": {
+          const progress = data.progress ?? 0;
+          spinnerProgress.textContent = `Progress: ${progress}%`;
+
+          if (data.status) {
+            spinnerStatus.textContent = `Status: ${data.status}`;
+          }
+          if (data.message) {
+            spinnerMessage.textContent = data.message;
+          }
+          break;
+        }
+
+        case "status":
+          spinnerStatus.textContent = `Status: ${data.status || "Starting..."}`;
+          break;
+
+        case "error": {
+          const error = data.message || data.error || "Unknown error";
+          spinnerStatus.textContent = "Status: Error";
+          spinnerMessage.textContent = error;
+          spinnerProgress.textContent = "";
+          showAlert(`Error during ISO creation: ${error}`);
+          break;
+        }
+
+        default:
+          console.warn("Unknown WebSocket message type:", data);
+      }
+    } catch (err) {
+      console.error("Failed to parse WebSocket message:", err, event.data);
+    }
+  };
+
+  /**
+   * Handle WebSocket closure.
+   */
+  const handleSocketClose = (event) => {
+    if (event.wasClean) {
+      console.log(
+        `WebSocket closed cleanly, code=${event.code} reason=${event.reason}`
+      );
+    } else {
+      console.warn("WebSocket closed unexpectedly");
+    }
+
+    spinnerMessage.textContent = "ISO creation process has finished.";
     setTimeout(() => {
       hide(loadingSpinner);
-      // re-enable the submit button
       submitBtn.disabled = false;
       closeBtn.click();
-    }, 6800);
-  } else {
-    const { jobId } = result;
-    console.log(`ISO creation started. Job ID: ${jobId}`);
+    }, 1500);
+  };
 
-    // open a socket connection to receive progress updates
+  /**
+   * Handle WebSocket errors.
+   */
+  const handleSocketError = (error) => {
+    console.error("WebSocket error:", error);
+    showAlert("WebSocket error occurred. See console for details.");
+    spinnerMessage.textContent = "Error during ISO creation.";
+    setTimeout(() => {
+      hide(loadingSpinner);
+      submitBtn.disabled = false;
+      closeBtn.click();
+    }, 4500);
+  };
+
+  /**
+   * Open WebSocket and register handlers.
+   */
+  const openSocket = (jobId) => {
     const socket = new WebSocket(`wss://${window.location.host}/api/ws/iso`);
 
     socket.onopen = () => {
       console.log("WebSocket connection established.");
-      // change the loading spinner text
       socket.send(JSON.stringify({ jobId }));
-      loadingSpinner.setAttribute("data-text", "Starting ISO creation...");
+      console.log("Sent jobId to server:", jobId);
+      spinnerMessage.textContent = "Starting ISO creation...";
     };
 
-    socket.onmessage = (event) => {
-      const { data } = JSON.parse(event.data);
-      console.log("Received data:", data);
-      if (data.type === "progress") {
-        const progress = data.progress || 0;
-        spinnerText.textContent = `Progress: ${progress}%`;
-      } else if (data.type === "status") {
-        const status = data.status || "Starting...";
-        spinnerText.textContent = `Status: ${status}`;
-      } else if (data.type === "error") {
-        const error = data.error || "Unknown error";
-        spinnerText.textContent = `Error: ${error}`;
-        showAlert(`Error during ISO creation: ${error}`);
-      }
-    };
+    socket.onmessage = handleSocketMessage;
+    socket.onclose = handleSocketClose;
+    socket.onerror = handleSocketError;
+  };
 
-    socket.onclose = (event) => {
-      if (event.wasClean) {
-        console.log(
-          `WebSocket connection closed cleanly, code=${event.code} reason=${event.reason}`
-        );
-      } else {
-        console.warn("WebSocket connection closed unexpectedly");
-      }
-      // change the loading spinner text
-      loadingSpinner.setAttribute("data-text", "ISO creation complete.");
-      spinnerText.textContent = "ISO creation process has finished.";
+  // ---- Execute the ISO creation request ----
+  try {
+    const result = await handleCreateIso(formState);
+
+    if (!result?.status) {
+      showAlert(result.error || "Error creating ISO");
       setTimeout(() => {
         hide(loadingSpinner);
-        // re-enable the submit button
         submitBtn.disabled = false;
         closeBtn.click();
-      }, 1500);
-    };
+      }, 6800);
+      return;
+    }
 
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      showAlert("WebSocket error occurred. See console for details.");
-      // change the loading spinner text
-      loadingSpinner.setAttribute("data-text", "Error during ISO creation.");
-      spinnerText.textContent = "ISO creation process has finished.";
-      setTimeout(() => {
-        hide(loadingSpinner);
-        // re-enable the submit button
-        submitBtn.disabled = false;
-        closeBtn.click();
-      }, 4500);
-    };
+    const { jobId } = result;
+    console.log(`ISO creation started. Job ID: ${jobId}`);
+    openSocket(jobId);
+  } catch (error) {
+    console.error("Error creating ISO:", error);
+    showAlert(error.message || "Unknown error");
+    setTimeout(() => {
+      hide(loadingSpinner);
+      submitBtn.disabled = false;
+      closeBtn.click();
+    }, 6800);
   }
 }

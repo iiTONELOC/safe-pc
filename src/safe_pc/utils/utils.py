@@ -57,3 +57,18 @@ def IS_VERBOSE() -> bool:
         bool: True if verbose mode is enabled, False otherwise.
     """
     return getenv("CAPSTONE_VERBOSE", "0") == "1"
+
+
+def calculate_percentage(part: int, whole: int) -> float:
+    """Calculate the percentage of `part` with respect to `whole`.
+
+    Args:
+        part (int): The part value.
+        whole (int): The whole value.
+
+    Returns:
+        float: The calculated percentage. Returns 0.0 if `whole` is 0 to avoid division by zero.
+    """
+    if whole == 0:
+        return 0.0
+    return (part / whole) * 100.0
