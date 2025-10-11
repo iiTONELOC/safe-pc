@@ -34,6 +34,7 @@ build-backend = "poetry.core.masonry.api"
 "dl-iso" = "safe_pc.proxmox_auto_installer.iso.iso:main"
 dev = "safe_pc.proxmox_auto_installer.scripts.run_dev:main"
 start = "safe_pc.proxmox_auto_installer.back_end.server:main"
+extract-iso = "safe_pc.proxmox_auto_installer.iso.tools:main"
 
 [dependency-groups]
 dev = [

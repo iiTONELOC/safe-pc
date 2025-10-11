@@ -1,7 +1,7 @@
-from os import chmod
 import shutil
 import asyncio
 import aiofiles
+from os import chmod
 from uuid import uuid4
 from sys import platform
 from pathlib import Path
@@ -10,12 +10,17 @@ from logging import getLogger
 
 
 from safe_pc.proxmox_auto_installer.iso.extractor import (
-    repack_iso_oscdimg,
     unpack_iso_7z,
 )
 from safe_pc.proxmox_auto_installer.iso.helpers import (
     create_answer_file,
     create_auto_installer_mode_file,
+)
+
+
+from safe_pc.proxmox_auto_installer.iso.tools import (
+    xorriso_extract_iso,
+    xorriso_repack_iso,
 )
 from safe_pc.proxmox_auto_installer.utils import unpack_initrd, repack_initrd
 from safe_pc.utils import setup_logging, verify_sha256, handle_keyboard_interrupt
@@ -113,14 +118,14 @@ class ModifiedProxmoxISO:
 
         self.repacked_iso_dir = self.work_dir / "repacked"
         self.extracted_iso_dir = self.work_dir / "extracted"
-        self.extracted_ram_disk = self.work_dir / "extracted_ram_disk" / "initrd.img"
+        self.extracted_ram_disk = self.work_dir / "extracted_ram_disk"
         self.repacked_ram_disk = self.work_dir / "repacked_ram_disk" / "initrd.img"
 
         for path in [
             self.work_dir,
             self.repacked_iso_dir,
             self.extracted_iso_dir,
-            self.extracted_ram_disk.parent,
+            self.extracted_ram_disk,
             self.repacked_ram_disk.parent,
         ]:
             path.mkdir(parents=True, exist_ok=True)
@@ -130,19 +135,13 @@ class ModifiedProxmoxISO:
     ) -> Path | None:
         """Performs the actual ISO modification."""
         self.LOGGER.info(f"Modifying ISO at {self.base_iso.iso_path}")
-        await on_update(5, "Extracting Proxmox ISO...") if on_update else None
-        coroutine_status = None
-        if platform == "win32":
-            coroutine_status = await unpack_iso_7z(
-                iso_path=self.base_iso.iso_path,
-                dest_path=self.extracted_iso_dir,
-            )
-        else:
-            self.LOGGER.warning(
-                "ISO modification on Unix-like systems not implemented yet."
-            )
-            return None
 
+        # 5. Extract ISO
+        await on_update(5, "Extracting Proxmox ISO...") if on_update else None
+        coroutine_status = await xorriso_extract_iso(
+            iso_path=self.base_iso.iso_path,
+            out_dir=self.extracted_iso_dir,
+        )
         self.LOGGER.info(
             f"Unpacked ISO to {self.extracted_iso_dir}. Routine result: {coroutine_status}"
         )
@@ -150,7 +149,7 @@ class ModifiedProxmoxISO:
         # 6. Create the auto-installer-mode.toml file
         if on_update:
             await on_update(6, "Creating auto-installer-mode.toml...")
-        ok = create_auto_installer_mode_file(
+        create_auto_installer_mode_file(
             path_to_unpacked_iso=self.extracted_iso_dir,
             path_to_answer_file="/tmp/answer.toml",
             verify_flag=True,
@@ -159,24 +158,25 @@ class ModifiedProxmoxISO:
         self.LOGGER.info("Created auto-installer-mode.toml")
 
         # 7. Extract initrd.img
-
         if on_update:
             await on_update(7, "Extracting initrd.img...")
 
         ok = await unpack_initrd(
             initrd_path=self.extracted_iso_dir / "boot" / "initrd.img",
-            dest_dir=self.extracted_ram_disk.parent,
+            dest_dir=self.extracted_ram_disk,
         )
+
         if not ok:
             self.LOGGER.error("Failed to unpack initrd.img")
             return None
 
-        self.LOGGER.info(f"Extracted initrd.img to {self.extracted_ram_disk.parent}")
+        self.LOGGER.info(f"Extracted initrd.img to {self.extracted_ram_disk}")
+
         # 8. Add answer file
         if on_update:
             await on_update(8, "Adding answer file to initrd...")
-        ok = create_answer_file(
-            path_to_unpacked_iso=self.extracted_ram_disk.parent,
+        create_answer_file(
+            path_to_unpacked_iso=self.extracted_ram_disk,
             using_answer_file=answer_file,
             verify_flag=False,
         )
@@ -187,21 +187,21 @@ class ModifiedProxmoxISO:
             await on_update(9, "Adding discovery script to initrd...")
         discovery_script_path = Path(__file__).parent / "bash_scripts" / "discovery.sh"
         self.LOGGER.info(
-            f"Copying discovery script from {discovery_script_path} to: {self.extracted_ram_disk.parent}"
+            f"Copying discovery script from {discovery_script_path} to: {self.extracted_ram_disk}"
         )
         shutil.copy(
             src=discovery_script_path,
-            dst=self.extracted_ram_disk.parent / "discovery.sh",
+            dst=self.extracted_ram_disk / "discovery.sh",
         )
         self.LOGGER.info("Added discovery script to initrd, setting executable bit")
-        (self.extracted_ram_disk.parent / "discovery.sh").chmod(0o755)
+        (self.extracted_ram_disk / "discovery.sh").chmod(0o755)
 
         # 10. Modify init
         if on_update:
             await on_update(10, "Modifying initrd init script...")
 
         self.LOGGER.info("Modifying init script to run discovery script")
-        init_file_path = self.extracted_ram_disk.parent / "init"
+        init_file_path = self.extracted_ram_disk / "init"
         async with aiofiles.open(init_file_path, mode="r") as f:
             init_contents = await f.readlines()
 
@@ -210,7 +210,7 @@ class ModifiedProxmoxISO:
                 init_contents.insert(
                     i + 1, '\necho "[*] Running discovery script..."\n'
                 )
-                init_contents.insert(i + 2, "chmod +x /discovery.sh\n")
+                init_contents.insert(i + 2, "chmod +x discovery.sh\n")
                 init_contents.insert(i + 3, "/discovery.sh\n")
                 init_contents.insert(i + 4, 'echo "[*] Discovery script finished."\n')
                 break
@@ -218,16 +218,20 @@ class ModifiedProxmoxISO:
         async with aiofiles.open(init_file_path, mode="w") as f:
             await f.writelines(init_contents)
 
+        # ensure init is executable
+        chmod(init_file_path, 0o755)
+
         self.LOGGER.info("Modified init script successfully, repacking initrd.img")
         # 11. Repack initrd.img
         if on_update:
             await on_update(11, "Repacking initrd.img...")
         if platform == "win32":
             ok = await repack_initrd(
-                src_dir=self.extracted_ram_disk.parent,
+                src_dir=self.extracted_ram_disk,
                 out_path=self.repacked_ram_disk,
                 zstd_level=19,
             )
+
             if not ok:
                 self.LOGGER.error("Failed to repack initrd.img")
                 return None
@@ -250,7 +254,9 @@ class ModifiedProxmoxISO:
             except PermissionError:
                 chmod(boot_initrd_path, 0o666)
                 boot_initrd_path.unlink()
+
         self.LOGGER.info(f"Moving new initrd.img into place at {boot_initrd_path}")
+
         # Move new initrd.img into place asynchronously
         await asyncio.to_thread(
             shutil.move,
@@ -265,11 +271,14 @@ class ModifiedProxmoxISO:
 
         await on_update(13, "Repacking modified ISO...") if on_update else None
 
-        self.LOGGER.info("Repacking modified ISO with oscdimg...")
-        ok = await repack_iso_oscdimg(
-            source_dir=self.extracted_iso_dir,
+        self.LOGGER.info(
+            f"Repacking modified ISO with xorriso...: source {self.extracted_iso_dir} output {out}"
+        )
+        ok = await xorriso_repack_iso(
+            unpacked_iso_dir=self.extracted_iso_dir,
             output_iso=out,
         )
+
         if not ok:
             self.LOGGER.error("Failed to repack modified ISO")
             return None
