@@ -203,6 +203,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     disableSubmitButton(submitBtn);
     // display loading spinner
     show(loadingSpinner);
+    //ensure the country is lowercase
+    if (formState.global.country) {
+      formState.global.country = formState.global.country.toLowerCase();
+    }
 
     await createIso(formState, loadingSpinner, submitBtn, closeBtn, hide);
   });

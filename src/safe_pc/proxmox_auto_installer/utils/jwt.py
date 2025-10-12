@@ -1,11 +1,14 @@
 import jwt
 from os import environ
-from datetime import datetime, timedelta, timezone
+from typing import Any
 from fastapi.responses import JSONResponse
+from collections.abc import Callable, Awaitable
+from datetime import datetime, timedelta, timezone
+
 
 
 def create_jwt(
-    payload: dict, secret: str, algorithm: str = "HS256", lifetime_minutes: int = 2
+    payload: dict[str, Any], secret: str, algorithm: str = "HS256", lifetime_minutes: int = 2
 ) -> str:
     """Creates a JSON Web Token (JWT) with the given payload, secret, and expiration time.
 
@@ -23,8 +26,7 @@ def create_jwt(
     exp = int(exp.timestamp())
     return jwt.encode({**payload, "exp": exp}, secret, algorithm=algorithm)
 
-
-def decode_jwt(token: str, secret: str, algorithms: list = ["HS256"]) -> dict:
+def decode_jwt(token: str, secret: str, algorithms: list[str] = ["HS256"]) -> dict[str, Any]:
     """Decodes and verifies a JSON Web Token (JWT) using the provided secret and algorithms.
 
     Args:
@@ -41,9 +43,8 @@ def decode_jwt(token: str, secret: str, algorithms: list = ["HS256"]) -> dict:
     """
     return jwt.decode(token, secret, algorithms=algorithms)
 
-
 def is_jwt_valid(
-    token: str, secret: str, algorithms: list = ["HS256"]
+    token: str, secret: str, algorithms: list[str] = ["HS256"]
 ) -> tuple[bool, bool]:
     """Checks if a JSON Web Token (JWT) is valid and not expired.
 
@@ -64,18 +65,16 @@ def is_jwt_valid(
     except jwt.InvalidTokenError:
         return False, False
 
-
-def get_jwt_from_request(request) -> str | None:
+def get_jwt_from_request(request: Any) -> str | None:
     cookie = request.headers.get("cookie", "")
-    cookies = {
+    cookies: dict[str, str] = {
         item.split("=")[0]: item.split("=")[1]
         for item in cookie.split("; ")
         if "=" in item
     }
     return cookies.get("JWT", None)
 
-
-async def handle_root_path(request, call_next):
+async def handle_root_path(request: Any, call_next: Callable[[Any], Awaitable[Any]]) -> Any:
     if request.url.path == "/":
         current_token = get_jwt_from_request(request)
         token = None
@@ -93,8 +92,7 @@ async def handle_root_path(request, call_next):
     response = await call_next(request)
     return response
 
-
-async def jwt_middleware(request, call_next):
+async def jwt_middleware(request: Any, call_next: Callable[[Any], Awaitable[Any]]) -> Any | JSONResponse:
     IGNORED_PATHS = ["/static", "/trigger-reload"]
     # Example: Check for JWT in Authorization header
     jwt_cookie = get_jwt_from_request(request)
@@ -106,7 +104,7 @@ async def jwt_middleware(request, call_next):
         return response
 
     # Bypass any ignored paths
-    if any(current_path.startswith(p) for p in IGNORED_PATHS):
+    if any(current_path.startswith(p) for p in IGNORED_PATHS) or current_path.startswith("/api/prox/"):
         response = await call_next(request)
         return response
 
@@ -114,11 +112,11 @@ async def jwt_middleware(request, call_next):
     if jwt_cookie is not None:
         try:
 
-            isValid, isExpired = is_jwt_valid(
+            is_valid, is_expired = is_jwt_valid(
                 jwt_cookie, secret=environ.get("JWT_SECRET", "default_secret")
             )
             # if we had a valid but expired token, create a new one
-            if isExpired and isValid:
+            if is_expired and is_valid:
                 token = create_jwt(
                     {"role": "installer"},
                     environ.get("JWT_SECRET", "default_secret"),
@@ -131,7 +129,7 @@ async def jwt_middleware(request, call_next):
                 return response
 
             # if the token is not valid or is expired, (should not be expired) reject the request
-            if not isValid or isExpired:
+            if not is_valid or is_expired:
                 print("Invalid or expired JWT token.")
                 return JSONResponse(
                     status_code=401, content={"detail": "Invalid token"}

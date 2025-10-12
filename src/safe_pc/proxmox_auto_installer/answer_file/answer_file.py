@@ -1,4 +1,6 @@
+
 from typing import Any
+from hashlib import sha256
 from re import sub, MULTILINE
 from safe_pc.proxmox_auto_installer.answer_file.disk import (
     DISK_CONFIG_DEFAULTS,
@@ -14,8 +16,7 @@ from safe_pc.proxmox_auto_installer.answer_file.network import (
 )
 
 from pydantic import BaseModel, Field
-from tomlkit import dumps as toml_dumps
-
+from tomlkit import dumps as toml_dumps # type: ignore[import]
 
 class ProxmoxAnswerFile(BaseModel):
     model_config = {"populate_by_name": True}
@@ -35,13 +36,13 @@ class ProxmoxAnswerFile(BaseModel):
         alias="disk-setup",
     )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         # ensure none values are removed
         def remove_none(d: Any) -> Any:
             if isinstance(d, dict):
-                return {k: remove_none(v) for k, v in d.items() if v is not None}
+                return {k: remove_none(v) for k, v in d.items() if v is not None} # type: ignore[return-value]
             elif isinstance(d, list):
-                return [remove_none(v) for v in d]
+                return [remove_none(v) for v in d] # type: ignore[return-value]
             else:
                 return d
 
@@ -58,10 +59,14 @@ class ProxmoxAnswerFile(BaseModel):
         # ensure keys are not quoted
         toml_str = sub(r'^"([^"]+)"\s*=', r"\1 =", toml_str, flags=MULTILINE)
         return toml_str
+    
+    def calculate_hash(self) -> str:
+        toml_str = self.to_toml_str()
+        return sha256(toml_str.encode("utf-8")).hexdigest()
 
 
-def create_answer_file_from_dict(data: dict) -> ProxmoxAnswerFile:
-    args = {
+def create_answer_file_from_dict(data: dict[str, Any]) -> ProxmoxAnswerFile:
+    args: dict[str, Any] = {
         **{
             "global": GLOBAL_CONFIG_DEFAULTS,
             "network": NETWORK_CONFIG_DEFAULTS,
@@ -73,3 +78,9 @@ def create_answer_file_from_dict(data: dict) -> ProxmoxAnswerFile:
     ans = ProxmoxAnswerFile.model_validate(args)
 
     return ans
+
+def create_answer_file_from_toml(toml_str: str) -> ProxmoxAnswerFile:
+    import tomlkit # type: ignore[import]
+
+    data = tomlkit.parse(toml_str)
+    return create_answer_file_from_dict(data)

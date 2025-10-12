@@ -4,10 +4,11 @@ Proxmox VE and verifying it hasn't been tampered with using via SHA-256 checksum
 """
 
 from re import match
+from typing import Any
 from pathlib import Path
-from typing import Callable
 from httpx import AsyncClient
 from logging import getLogger
+from collections.abc import Callable
 
 from safe_pc.utils import IS_TESTING, compute_sha256
 from safe_pc.proxmox_auto_installer.utils import handle_download
@@ -126,7 +127,7 @@ def need_to_download(iso_path: Path, expected_sha256: str) -> bool:
 
 
 async def handle_iso_download(
-    url: str, dest_path: Path, on_update: Callable | None = None
+    url: str, dest_path: Path, on_update: Callable[[int,int,str], Any] | None = None
 ):
     """Downloads the ISO from the specified URL to the destination path and
     saves its SHA-256 checksum in a .sha256 file.

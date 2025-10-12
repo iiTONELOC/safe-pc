@@ -10,16 +10,14 @@ SOURCE_PATTERN = re_compile(r"^(from-dhcp|from-answer)$")
 CIDR_PATTERN = re_compile(r"^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$")
 IP_PATTERN = re_compile(r"^(\d{1,3}\.){3}\d{1,3}$")
 DNS_PATTERN = re_compile(r"^(\d{1,3}\.){3}\d{1,3}(,(\d{1,3}\.){3}\d{1,3})*$")
-MAC_PATTERN = re_compile(
-    r"^\*?(?:[0-9A-Fa-f]{12}|(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})$"
-)
+MAC_PATTERN = re_compile(r"^\*?[0-9A-Fa-f]{12}$")
 
 NETWORK_CONFIG_DEFAULTS = {
     "source": SOURCE_FROM_ANSWER,
     "cidr": "10.0.4.238/24",
     "gateway": "10.0.4.1",
     "dns": "10.0.4.1",
-    "mac_filter": "*00:11:22:33:44:55",
+    "mac_filter": "*bc241129f843",
 }
 
 
@@ -62,23 +60,23 @@ class NetworkConfig(BaseModel):
         return v
 
     @field_validator("cidr", "gateway", "dns")
-    def enforce_required_fields(cls, v, info):
-        source_value = info.data.get("source")
-        required = info.field_name in {"cidr", "gateway", "dns"}
+    def enforce_required_fields(cls, v, info):# type: ignore
+        source_value = info.data.get("source")# type: ignore
+        required = info.field_name in {"cidr", "gateway", "dns"}# type: ignore
         if source_value == SOURCE_FROM_ANSWER:
             if required and (v is None or v == ""):
                 raise ValueError(
-                    f"{info.field_name} is required when source is '{SOURCE_FROM_ANSWER}'"
+                    f"{info.field_name} is required when source is '{SOURCE_FROM_ANSWER}'"# type: ignore
                 )
         elif v is not None:
             raise ValueError(
-                f"{info.field_name} must be None when source is not '{SOURCE_FROM_ANSWER}'"
+                f"{info.field_name} must be None when source is not '{SOURCE_FROM_ANSWER}'"# type: ignore
             )
-        return v
+        return v # type: ignore
 
     @field_validator("cidr", mode="before")
-    def validate_cidr(cls, v: str | None, info):
-        if info.data.get("source") != SOURCE_FROM_ANSWER:
+    def validate_cidr(cls, v: str | None, info):# type: ignore
+        if info.data.get("source") != SOURCE_FROM_ANSWER:# type: ignore
             return v
         if not v:
             raise ValueError("CIDR cannot be empty when source is 'from-answer'")
@@ -103,15 +101,15 @@ class NetworkConfig(BaseModel):
         return v
 
     @field_validator("gateway")
-    def validate_gateway(cls, v: str | None, info):
-        if info.data.get("source") != SOURCE_FROM_ANSWER:
+    def validate_gateway(cls, v: str | None, info):# type: ignore
+        if info.data.get("source") != SOURCE_FROM_ANSWER:# type: ignore
             return v
         if not v or not IP_PATTERN.match(v):
             raise ValueError(f"Invalid gateway: {v}")
-        cidr_value = info.data.get("cidr")
+        cidr_value = info.data.get("cidr")# type: ignore
         if not cidr_value:
             raise ValueError("CIDR must be set when source is 'from-answer'")
-        net = ip_network(cidr_value, strict=False)
+        net = ip_network(cidr_value, strict=False) # type: ignore
         gw = ip_address(v)
         if (
             gw not in net
@@ -126,12 +124,12 @@ class NetworkConfig(BaseModel):
         return v
 
     @field_validator("dns")
-    def validate_dns(cls, v: str | None, info):
-        if info.data.get("source") != SOURCE_FROM_ANSWER or not v:
+    def validate_dns(cls, v: str | None, info): # type: ignore
+        if info.data.get("source") != SOURCE_FROM_ANSWER or not v: # type: ignore
             return v
         if not DNS_PATTERN.match(v):
             raise ValueError(f"Invalid DNS pattern: {v}")
-        seen = set()
+        seen = set() #type: ignore
         for ip_str in v.split(","):
             ip_str = ip_str.strip()
             if ip_str in seen:
@@ -140,7 +138,7 @@ class NetworkConfig(BaseModel):
                 ip_address(ip_str)
             except ValueError:
                 raise ValueError(f"Invalid DNS IP address: {ip_str}")
-            seen.add(ip_str)
+            seen.add(ip_str) # type: ignore
         return v
 
     @field_validator("mac_filter")

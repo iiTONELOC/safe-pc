@@ -19,6 +19,7 @@ dependencies = [
     "tqdm (>=4.67.1,<5.0.0)",
     "aiofiles (>=24.1.0,<25.0.0)",
     "passlib (>=1.7.4,<2.0.0)",
+    "websockets (>=15.0.1,<16.0.0)",
     "zstandard (>=0.25.0,<0.26.0)"
     ]
 
@@ -39,6 +40,5 @@ extract-iso = "safe_pc.proxmox_auto_installer.iso.tools:main"
 [dependency-groups]
 dev = [
     "pytest (>=8.4.2,<9.0.0)",
-    "websockets (>=15.0.1,<16.0.0)",
     "pytest-asyncio (>=1.2.0,<2.0.0)"
 ]

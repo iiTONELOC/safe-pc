@@ -4,12 +4,19 @@ from safe_pc.proxmox_auto_installer.utils.tzd import ProxmoxTimezoneHelper
 from safe_pc.proxmox_auto_installer.constants import PROXMOX_ALLOWED_KEYBOARDS
 from safe_pc.proxmox_auto_installer.utils.country_codes import ProxmoxCountryCodeHelper
 
-timezone_list = ProxmoxTimezoneHelper()._timezones
+timezone_list = ProxmoxTimezoneHelper()._timezones # type: ignore
 country_list = ProxmoxCountryCodeHelper().get_country_codes_list()
 
-COUNTRY_CODE_PATTERN = re_compile(r"^[A-Z]{2}$")
+COUNTRY_CODE_PATTERN = re_compile(r"^[a-z]{2}$")
 KEYBOARD_COUNTRY_PATTERN = re_compile(r"^[a-z]{2}(-[a-z]{2})?$")
-TIMEZONE_PATTERN = re_compile(r"^[A-Za-z_]+/[A-Za-z_]+(/[A-Za-z_]+)?$")
+TIMEZONE_PATTERN = re_compile(
+    r"^(?:"
+    r"UTC|GMT|Z|"                 # common aliases
+    r"Etc/GMT[+-]\d{1,2}|"        # Etc/GMT+/-H
+    r"(?:[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*/){1,3}"  # 2–4 segments total
+    r"[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*"
+    r")$"
+)
 FQDN_PATTERN = re_compile(
     r"^([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$"
 )
@@ -22,7 +29,7 @@ EMAIL_OR_LOCALHOST_PATTERN = re_compile(
 
 GLOBAL_CONFIG_DEFAULTS = {
     "keyboard": "en-us",
-    "country": "US",
+    "country": "us",
     "timezone": "America/New_York",
     "fqdn": "proxmox.lab.local",
     "mailto": "root@localhost",
@@ -91,7 +98,7 @@ class GlobalConfig(BaseModel):
     def validate_timezone_pattern(cls, timezone_value: str) -> str:
         if not TIMEZONE_PATTERN.match(timezone_value):
             raise ValueError(f"Invalid timezone pattern: {timezone_value}")
-        if timezone_value not in timezone_list:
+        if not isinstance(timezone_list, list) or timezone_value not in timezone_list:
             raise ValueError(f"Invalid timezone: {timezone_value}")
         return timezone_value
 
@@ -123,6 +130,6 @@ class GlobalConfig(BaseModel):
 
     @field_validator("timezone")
     def validate_timezone_allowed(cls, timezone_value: str) -> str:
-        if timezone_value not in timezone_list:
+        if not timezone_list or timezone_value not in timezone_list:
             raise ValueError(f"Invalid timezone: {timezone_value}")
         return timezone_value

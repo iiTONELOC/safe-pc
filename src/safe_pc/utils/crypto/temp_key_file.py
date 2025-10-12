@@ -3,6 +3,8 @@ import atexit
 import signal
 import tempfile
 from pathlib import Path
+from types import FrameType
+
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 
@@ -19,7 +21,12 @@ class TempKeyFile:
     a file path, while minimizing the risk of leaving sensitive data on disk.
     """
 
-    def __init__(self, key_input, prefix="safe-pc-key-", suffix=".pem"):
+    def __init__(
+        self,
+        key_input: bytes | bytearray | EllipticCurvePrivateKey,
+        prefix:str="safe-pc-key-",
+        suffix:str=".pem"
+    ):
         """
         key_input may be:
           - bytes (already PEM-encoded)
@@ -83,7 +90,9 @@ class TempKeyFile:
 
         return self._path
 
-    def _signal_handler(self, _, __):
+
+
+    def _signal_handler(self, signum: int, frame: FrameType|None) -> None:
         self._cleanup()
         # re-raise default behavior after cleanup
         raise SystemExit(0)
@@ -106,5 +115,5 @@ class TempKeyFile:
                 pass
         self._path = None
 
-    def __exit__(self, exc_type, exc, tb):
+    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: object | None) -> None:
         self._cleanup()

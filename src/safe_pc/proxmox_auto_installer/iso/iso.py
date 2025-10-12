@@ -1,28 +1,25 @@
 import shutil
-import asyncio
 import aiofiles
 from os import chmod
 from uuid import uuid4
-from sys import platform
+from typing import Any
 from pathlib import Path
-from typing import Callable
 from logging import getLogger
-
-
-from safe_pc.proxmox_auto_installer.iso.extractor import (
-    unpack_iso_7z,
-)
+from collections.abc import Callable
+from safe_pc.utils import get_local_ip
 from safe_pc.proxmox_auto_installer.iso.helpers import (
     create_answer_file,
     create_auto_installer_mode_file,
 )
-
-
 from safe_pc.proxmox_auto_installer.iso.tools import (
+    unpack_initrd,
+    repack_initrd,
     xorriso_extract_iso,
     xorriso_repack_iso,
+    replace_initrd_file
 )
-from safe_pc.proxmox_auto_installer.utils import unpack_initrd, repack_initrd
+from safe_pc.proxmox_auto_installer.answer_file.answer_file import create_answer_file_from_toml, ProxmoxAnswerFile, NETWORK_CONFIG_DEFAULTS
+
 from safe_pc.utils import setup_logging, verify_sha256, handle_keyboard_interrupt
 from safe_pc.proxmox_auto_installer.iso.downloader import (
     validate_iso_url,
@@ -61,7 +58,7 @@ class ProxmoxISO:
         """Extracts the ISO filename from the URL."""
         return self.url.split("/")[-1]
 
-    async def download(self, on_update: Callable | None = None) -> bool:
+    async def download(self, on_update: Callable[[int,int,str], Any]= lambda x,t,y : print(f"{x/t}%, {y}")) -> bool:
         """Downloads the ISO file to the specified directory.
 
         Args:
@@ -70,7 +67,7 @@ class ProxmoxISO:
         Returns:
             bool: True if the ISO is successfully downloaded or already valid, False otherwise.
         """
-        await on_update(1, "Fetching latest Proxmox ISO URL...") if on_update else None
+        await on_update(0,14 ,"Fetching latest Proxmox ISO URL...") 
         if not validate_iso_url(self.url):
             raise ValueError(f"Invalid ISO URL: {self.url}")
 
@@ -78,21 +75,21 @@ class ProxmoxISO:
             self.iso_path, self.sha256 or ""
         ):
             self.downloaded = True
-            await on_update(4, "ISO already downloaded and verified.")
+            await on_update(4,14, "ISO already downloaded and verified.")
             return True
 
         self.iso_dir.mkdir(parents=True, exist_ok=True)
-        await on_update(2, "Starting Download") if on_update else None
+        await on_update(1,14, "Starting Download") 
         await handle_iso_download(self.url, self.iso_path, on_update)
-        await on_update(3, "Download complete, verifying...") if on_update else None
+        await on_update(3,14, "Download complete, verifying...") 
         if self.sha256 and not await verify_sha256(
-            for_file_path=self.iso_path, expected_hash=self.sha256
+            for_file_path=str(self.iso_path), expected_hash=self.sha256
         ):
             self.iso_path.unlink(missing_ok=True)
             self.LOGGER.warning(
                 "SHA256 hash mismatch after download. Removed invalid ISO."
             )
-        await on_update(4, "ISO verified successfully.") if on_update else None
+        await on_update(4,14, "ISO verified successfully.")
         return self.iso_path.exists()
 
 
@@ -131,13 +128,13 @@ class ModifiedProxmoxISO:
             path.mkdir(parents=True, exist_ok=True)
 
     async def create_modified_iso(
-        self, answer_file: str, on_update: Callable | None = None
+        self, answer_file: str, on_update: Callable[[int,str], Any]
     ) -> Path | None:
         """Performs the actual ISO modification."""
         self.LOGGER.info(f"Modifying ISO at {self.base_iso.iso_path}")
 
         # 5. Extract ISO
-        await on_update(5, "Extracting Proxmox ISO...") if on_update else None
+        await on_update(5, "Extracting Proxmox ISO...") 
         coroutine_status = await xorriso_extract_iso(
             iso_path=self.base_iso.iso_path,
             out_dir=self.extracted_iso_dir,
@@ -147,23 +144,22 @@ class ModifiedProxmoxISO:
         )
 
         # 6. Create the auto-installer-mode.toml file
-        if on_update:
-            await on_update(6, "Creating auto-installer-mode.toml...")
-        create_auto_installer_mode_file(
+        await on_update(6, "Creating auto-installer-mode.toml...")
+        await create_auto_installer_mode_file(
             path_to_unpacked_iso=self.extracted_iso_dir,
-            path_to_answer_file="/tmp/answer.toml",
+            job_id=self.job_id,
             verify_flag=True,
         )
 
         self.LOGGER.info("Created auto-installer-mode.toml")
 
         # 7. Extract initrd.img
-        if on_update:
-            await on_update(7, "Extracting initrd.img...")
+       
+        await on_update(7, "Extracting initrd.img...")
 
         ok = await unpack_initrd(
             initrd_path=self.extracted_iso_dir / "boot" / "initrd.img",
-            dest_dir=self.extracted_ram_disk,
+            out_dir=self.extracted_ram_disk,
         )
 
         if not ok:
@@ -173,8 +169,8 @@ class ModifiedProxmoxISO:
         self.LOGGER.info(f"Extracted initrd.img to {self.extracted_ram_disk}")
 
         # 8. Add answer file
-        if on_update:
-            await on_update(8, "Adding answer file to initrd...")
+      
+        await on_update(8, "Adding answer file to initrd...")
         create_answer_file(
             path_to_unpacked_iso=self.extracted_ram_disk,
             using_answer_file=answer_file,
@@ -183,9 +179,33 @@ class ModifiedProxmoxISO:
 
         self.LOGGER.info("Added answer file to initrd")
         # 9. Discovery script
-        if on_update:
-            await on_update(9, "Adding discovery script to initrd...")
+        # need to grab dns, gateway, ip, from the answer file
+        _answer_obj:ProxmoxAnswerFile = create_answer_file_from_toml(answer_file)
+        newtwork = _answer_obj.network
+        
+        dns = newtwork.dns or NETWORK_CONFIG_DEFAULTS["dns"]
+        gw_ip = newtwork.gateway or NETWORK_CONFIG_DEFAULTS["gateway"]
+        ip = newtwork.cidr or NETWORK_CONFIG_DEFAULTS["cidr"]       
+        
+        
+        await on_update(9, "Adding discovery script to initrd...")
+        discovery_script_path = Path(__file__).parent / "bash_scripts" / "discovery.t.sh"
+        # read the script and replace the placeholders with actual values
+        script_contents = ""
+        async with aiofiles.open(discovery_script_path, mode="r") as f:
+            script_contents = await f.read()
+                
+            script_contents = script_contents.replace("{{dns}}", dns)
+            script_contents = script_contents.replace("{{gw_ip}}", gw_ip)
+            script_contents = script_contents.replace("{{ip}}", ip)
+            script_contents = script_contents.replace("{{config_server}}", get_local_ip())
+            script_contents = script_contents.replace("{{job_id}}", self.job_id)
+        
         discovery_script_path = Path(__file__).parent / "bash_scripts" / "discovery.sh"
+        
+        # write the modified script contents
+        async with aiofiles.open(discovery_script_path, mode="w") as f:
+            await f.write(script_contents)
         self.LOGGER.info(
             f"Copying discovery script from {discovery_script_path} to: {self.extracted_ram_disk}"
         )
@@ -197,8 +217,8 @@ class ModifiedProxmoxISO:
         (self.extracted_ram_disk / "discovery.sh").chmod(0o755)
 
         # 10. Modify init
-        if on_update:
-            await on_update(10, "Modifying initrd init script...")
+   
+        await on_update(10, "Modifying initrd init script...")
 
         self.LOGGER.info("Modifying init script to run discovery script")
         init_file_path = self.extracted_ram_disk / "init"
@@ -223,45 +243,30 @@ class ModifiedProxmoxISO:
 
         self.LOGGER.info("Modified init script successfully, repacking initrd.img")
         # 11. Repack initrd.img
-        if on_update:
-            await on_update(11, "Repacking initrd.img...")
-        if platform == "win32":
-            ok = await repack_initrd(
-                src_dir=self.extracted_ram_disk,
-                out_path=self.repacked_ram_disk,
-                zstd_level=19,
-            )
+     
+        await on_update(11, "Repacking initrd.img...")
+    
+        ok = await repack_initrd(
+            unpacked_initrd_dir=self.extracted_ram_disk,
+            output_initrd=self.repacked_ram_disk,
+        )
 
-            if not ok:
-                self.LOGGER.error("Failed to repack initrd.img")
-                return None
-        else:
-            self.LOGGER.warning("Repacking not implemented for Unix-like systems.")
+        if not ok:
+            self.LOGGER.error("Failed to repack initrd.img")
             return None
-
+    
         self.LOGGER.info(
             f"Repacked initrd.img to {self.repacked_ram_disk}, replacing in ISO"
         )
         # 12. Replace initrd.img in boot
-        if on_update:
-            await on_update(12, "Replacing initrd.img in ISO...")
-            boot_initrd_path = self.extracted_iso_dir / "boot" / "initrd.img"
+        
+        await on_update(12, "Replacing initrd.img in ISO...")
+        boot_initrd_path = self.extracted_iso_dir / "boot" / "initrd.img"
 
-        # Remove existing file if present (handle permission issues on Windows)
-        if boot_initrd_path.exists():
-            try:
-                boot_initrd_path.unlink()
-            except PermissionError:
-                chmod(boot_initrd_path, 0o666)
-                boot_initrd_path.unlink()
-
-        self.LOGGER.info(f"Moving new initrd.img into place at {boot_initrd_path}")
-
-        # Move new initrd.img into place asynchronously
-        await asyncio.to_thread(
-            shutil.move,
-            str(self.repacked_ram_disk),
-            str(boot_initrd_path),
+       
+        await replace_initrd_file(
+            new_file=self.repacked_ram_disk,
+            dest_file=boot_initrd_path,
         )
         out = self.repacked_iso_dir / f"auto-installer-{self.job_id}.iso"
         self.LOGGER.info(
@@ -269,7 +274,7 @@ class ModifiedProxmoxISO:
         )
         # 13. Repack entire ISO
 
-        await on_update(13, "Repacking modified ISO...") if on_update else None
+        await on_update(13, "Repacking modified ISO...") 
 
         self.LOGGER.info(
             f"Repacking modified ISO with xorriso...: source {self.extracted_iso_dir} output {out}"
@@ -283,9 +288,63 @@ class ModifiedProxmoxISO:
             self.LOGGER.error("Failed to repack modified ISO")
             return None
 
-        await on_update(13.5, "Finished...") if on_update else None
+        await on_update(14, "Finished...")
         self.LOGGER.info(f"Repacked modified ISO to {out}")
         return out
+    
+    def move_iso_to_final_location(self, final_dir: Path | None = None) -> Path:
+        """
+        Move the ISO into the root isos dir (/.../data/isos). Overwrite if target exists.
+        If self.modified_iso_path doesn't exist, auto-detect the newest ISO under repacked/
+        (fallback to any *.iso under work_dir).
+        """
+        import os
+        from pathlib import Path
+
+        # 1) Resolve source
+        src = Path(getattr(self, "modified_iso_path", "")) if getattr(self, "modified_iso_path", None) else None
+        if not src or not src.exists():
+            # Try the expected repacked/ location first
+            repacked_dir = Path(self.work_dir) / "repacked"
+            candidates = []
+            if repacked_dir.exists():
+                candidates.extend(repacked_dir.glob("*.iso")) # type: ignore
+            # Fallback: any ISO under work_dir
+            if not candidates:
+                candidates = list(Path(self.work_dir).rglob("*.iso"))
+
+            if not candidates:
+                raise FileNotFoundError(
+                    f"ISO to move not found. Tried modified_iso_path={self.modified_iso_path!s}, "
+                    f"repacked_dir={repacked_dir}"
+                )
+
+            # Pick the newest by mtime
+            candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            src = candidates[0]
+            # Update pointer so future calls are consistent
+            self.modified_iso_path = src
+            self.LOGGER.info(f"[move_iso_to_final_location] Auto-selected ISO source: {src}")
+
+        # 2) Resolve destination root (/.../data/isos)
+        target_dir = final_dir or self.base_iso.iso_dir.parent
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        # Keep exact filename, overwrite atomically
+        dst = target_dir / src.name
+        os.replace(str(src), str(dst))
+
+        # 3) Log & update
+        self.LOGGER.info({
+            "base_iso_path": str(self.base_iso.iso_path),
+            "work_dir": str(self.work_dir),
+            "moved_from": str(src),
+            "final_iso_dir": str(target_dir),
+            "final_iso_path": str(dst),
+        })
+        self.modified_iso_path = dst
+        return dst
+
 
 
 async def run():

@@ -1,6 +1,8 @@
+import os
+from typing import Any
 from pathlib import Path
 from cryptography import x509
-from os import name as os_name
+
 from argparse import ArgumentParser
 from cryptography.x509.oid import NameOID
 from datetime import datetime, timedelta, timezone
@@ -10,14 +12,13 @@ from safe_pc.utils.utils import get_local_ip
 
 
 # if windows, import the required modules for setting file permissions
-if os_name == "nt":
-    from safe_pc.utils.crypto.dpapi import write_dpapi_protected_key
+if os.name == "nt":
+    from safe_pc.utils.crypto.dpapi import write_dpapi_protected_key 
     import win32api
     import win32security
     import ntsecuritycon as con
 
-
-SAFE_PC_CERT_DEFAULTS = {
+SAFE_PC_CERT_DEFAULTS: dict[str, Any] = {
     "cert_dir": Path(__file__).resolve().parents[4] / "certs",
     "name_prefix": "safe-pc-",
     "country": "US",
@@ -31,7 +32,7 @@ SAFE_PC_CERT_DEFAULTS = {
 }
 
 
-def generate_self_signed_cert(**kwargs):
+def generate_self_signed_cert(**kwargs: Any) -> tuple[Path, Path]:
     """
     Generate a self-signed ECDSA certificate and private key.
 
@@ -53,7 +54,7 @@ def generate_self_signed_cert(**kwargs):
         Writes {cert_dir}/{name_prefix}key.pem and {cert_dir}/{name_prefix}cert.pem
     """
 
-    params = {**SAFE_PC_CERT_DEFAULTS, **kwargs}
+    params: dict[str, Any] = {**SAFE_PC_CERT_DEFAULTS, **kwargs}
 
     cert_dir = Path(params["cert_dir"])
     name_prefix = params["name_prefix"]
@@ -68,9 +69,9 @@ def generate_self_signed_cert(**kwargs):
 
     if not cert_dir.exists():
         cert_dir.mkdir(parents=True, exist_ok=False)
-        if os_name == "posix":
+        if os.name == "posix":
             cert_dir.chmod(0o700)
-        elif os_name == "nt":
+        elif os.name == "nt":
             _harden_windows_dir(cert_dir)
 
     private_key = ec.generate_private_key(ec.SECP256R1())
@@ -113,7 +114,7 @@ def generate_self_signed_cert(**kwargs):
         cert_path = cert_dir / f"{name_prefix}cert({count}).pem"
         count += 1
 
-    if os_name == "nt":
+    if os.name == "nt":
         write_dpapi_protected_key(private_key, key_path)
     else:
         key_path.write_bytes(
@@ -126,48 +127,48 @@ def generate_self_signed_cert(**kwargs):
 
     cert_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
 
-    if os_name == "posix":
+    if os.name == "posix":
         key_path.chmod(0o600)
-    elif os_name == "nt":
+    elif os.name == "nt":
         _harden_windows_file(key_path)
 
     return key_path, cert_path
 
+if os.name == 'nt':
+    def _harden_windows_dir(path: Path):
+        """Restrict directory access to current user (Windows)."""
+        username = win32api.GetUserName()
+        user, _, _ = win32security.LookupAccountName("", username)
 
-def _harden_windows_dir(path: Path):
-    """Restrict directory access to current user (Windows)."""
-    username = win32api.GetUserName()
-    user, _, _ = win32security.LookupAccountName("", username)
-
-    sd = win32security.SECURITY_DESCRIPTOR()
-    dacl = win32security.ACL()
-    dacl.AddAccessAllowedAce(
-        win32security.ACL_REVISION,
-        con.FILE_GENERIC_READ | con.FILE_GENERIC_WRITE | con.FILE_GENERIC_EXECUTE,
-        user,
-    )
-    sd.SetSecurityDescriptorDacl(1, dacl, 0)
-    win32security.SetFileSecurity(
-        str(path), win32security.DACL_SECURITY_INFORMATION, sd
-    )
+        sd = win32security.SECURITY_DESCRIPTOR()
+        dacl = win32security.ACL()
+        dacl.AddAccessAllowedAce(
+            win32security.ACL_REVISION,
+            con.FILE_GENERIC_READ | con.FILE_GENERIC_WRITE | con.FILE_GENERIC_EXECUTE,
+            user,
+        )
+        sd.SetSecurityDescriptorDacl(1, dacl, 0)
+        win32security.SetFileSecurity(
+            str(path), win32security.DACL_SECURITY_INFORMATION, sd
+        )
 
 
-def _harden_windows_file(path: Path):
-    """Restrict file access to current user (Windows)."""
-    username = win32api.GetUserName()
-    user, _, _ = win32security.LookupAccountName("", username)
+    def _harden_windows_file(path: Path):
+        """Restrict file access to current user (Windows)."""
+        username = win32api.GetUserName()
+        user, _, _ = win32security.LookupAccountName("", username)
 
-    sd = win32security.SECURITY_DESCRIPTOR()
-    dacl = win32security.ACL()
-    dacl.AddAccessAllowedAce(
-        win32security.ACL_REVISION,
-        con.FILE_GENERIC_READ | con.FILE_GENERIC_WRITE,
-        user,
-    )
-    sd.SetSecurityDescriptorDacl(1, dacl, 0)
-    win32security.SetFileSecurity(
-        str(path), win32security.DACL_SECURITY_INFORMATION, sd
-    )
+        sd = win32security.SECURITY_DESCRIPTOR()
+        dacl = win32security.ACL()
+        dacl.AddAccessAllowedAce(
+            win32security.ACL_REVISION,
+            con.FILE_GENERIC_READ | con.FILE_GENERIC_WRITE,
+            user,
+        )
+        sd.SetSecurityDescriptorDacl(1, dacl, 0)
+        win32security.SetFileSecurity(
+            str(path), win32security.DACL_SECURITY_INFORMATION, sd
+        )
 
 
 def main():

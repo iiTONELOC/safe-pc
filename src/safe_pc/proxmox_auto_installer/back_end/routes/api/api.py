@@ -21,16 +21,16 @@ class APIRoutes:
     ):
         # return a 200 hello work json response for testing
         @app.get(path="/api/installer/data")
-        def get_installer_data_route():
-            return get_installer_data()
+        def get_installer_data_route():# type: ignore
+            return get_installer_data()# type: ignore
 
         @app.post(path="/api/installer/iso")
-        async def installer_iso_route(request: Request):
+        async def installer_iso_route(request: Request):# type: ignore
             return await post_installer_iso(request)
 
         # websocket route for job status updates
         @app.websocket("/api/ws/iso")
-        async def installer_iso_ws_route(websocket: WebSocket):
+        async def installer_iso_ws_route(websocket: WebSocket):# type: ignore
 
             await websocket.accept()
             data = await websocket.receive_text()
@@ -39,7 +39,7 @@ class APIRoutes:
             LOGGER.info(f"WebSocket connection request for job {job_id}")
             job = await get_job(job_id)
             LOGGER.info(f"Found job: {job}")
-            if not job or job._socket is not None:
+            if not job or job._socket is not None: # type: ignore
                 await websocket.close(code=1008)
                 return
             LOGGER.info(f"Attaching socket to job {job_id}")
@@ -65,3 +65,4 @@ class APIRoutes:
             except WebSocketDisconnect:
                 LOGGER.info(f"WebSocket disconnected for job {job_id}")
                 await job.detach_socket()
+        

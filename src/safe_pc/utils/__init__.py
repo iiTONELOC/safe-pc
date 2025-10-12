@@ -1,3 +1,4 @@
+import os
 from safe_pc.utils.crypto import (
     TempKeyFile,
     compute_sha256,
@@ -9,17 +10,19 @@ from safe_pc.utils.crypto import (
     password_entropy,
     SAFE_PC_CERT_DEFAULTS,
     is_high_entropy_password,
-    write_dpapi_protected_key,
-    read_dpapi_protected_key,
     generate_self_signed_cert,
 )
 
 from safe_pc.utils.utils import (
+    CmdResult,
     IS_VERBOSE,
     IS_TESTING,
+    CommandError,
     get_local_ip,
+    run_command_async,
     calculate_percentage,
     handle_keyboard_interrupt,
+
 )
 
 from safe_pc.utils.logs import (
@@ -27,6 +30,8 @@ from safe_pc.utils.logs import (
 )
 
 __all__ = [
+    "CmdResult",
+    "CommandError",
     "IS_VERBOSE",
     "IS_TESTING",
     "get_local_ip",
@@ -39,11 +44,19 @@ __all__ = [
     "validate_sha256",
     "validate_sha512",
     "password_entropy",
+    "run_command_async",
     "calculate_percentage",
     "SAFE_PC_CERT_DEFAULTS",
     "is_high_entropy_password",
-    "write_dpapi_protected_key",
-    "read_dpapi_protected_key",
     "generate_self_signed_cert",
     "handle_keyboard_interrupt",
 ]
+
+if os.name == "nt":
+    from safe_pc.utils.crypto.dpapi import (
+        write_dpapi_protected_key,
+        read_dpapi_protected_key,
+    )
+
+    __all__.append("read_dpapi_protected_key")
+    __all__.append("write_dpapi_protected_key")

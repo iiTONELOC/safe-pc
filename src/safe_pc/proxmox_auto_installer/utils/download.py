@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import Callable
 from httpx import AsyncClient
 from logging import getLogger
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 
 from aiofiles import open as aio_open
@@ -24,35 +24,40 @@ async def _download_context(url: str, dest_path: Path):
         await client.aclose()
 
 
-def _should_use_progress(*, use_progress=None, progress=None) -> bool:
-    return use_progress and progress is not None
+def _should_use_progress(*, use_progress: bool = False, progress: object = None) -> bool:
+    return bool(use_progress) and progress is not None
 
 
-def _init_progress(*, use_progress=None, size=0) -> tqdm_asyncio | None:
+from typing import Any
+
+def _init_progress(*, use_progress: bool = False, size: int = 0) -> Any:
     if not use_progress:
         return None
     return tqdm_asyncio(total=size, unit="B", unit_scale=True, desc="Downloading")
 
 
+
+
 async def _update_progress(
     n: int,
     *,
-    use_progress=None,
-    progress=None,
-    downloaded=0,
-    size=0,
-    on_update: Callable | None = None,
+    use_progress: bool = False,
+    progress: Any | None = None,
+    downloaded: int = 0,
+    size: int = 0,
+    on_update: Callable[[int,int, str], Any]|None = None,
 ) -> int:
     downloaded += n
     if _should_use_progress(use_progress=use_progress, progress=progress):
-        progress.update(n)
+        if progress is not None:
+            progress.update(n)
     elif on_update:
-        await on_update(downloaded, size)
+        await on_update(downloaded,size, "Downloading Proxmox VE ISO...")
     return downloaded
 
 
 async def _single_downloader_async(
-    url: str, dest_path: Path, size: int, on_update: Callable | None = None
+    url: str, dest_path: Path, size: int, on_update:Callable[[int,int, str], Any]|None = None,
 ):
     downloaded = 0
     use_progress = on_update is None
@@ -96,7 +101,7 @@ async def _single_downloader_async(
             progress.close()
 
 
-async def handle_download(url: str, dest_path: Path, on_update: Callable | None = None):
+async def handle_download(url: str, dest_path: Path, on_update: Callable[[int,int, str], Any]|None = None,):
     """
     Asynchronously downloads a file from the specified URL to the given destination path.
     This function retrieves the file size via a HEAD request for progress tracking, ensures the destination directory exists,

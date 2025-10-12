@@ -30,7 +30,7 @@ class ProxmoxTimezoneHelper:
             cls._timezones = _get_timezones()
         return cls._instance
 
-    def get_timezones(self) -> list[str]:
+    def get_timezones(self) -> list[str]|None:
         self._ensure_initialized()
         return self._timezones
 
@@ -52,16 +52,42 @@ class ProxmoxTimezoneHelper:
     def get_local_timezone(self) -> str:
         """
         Determines and returns the local timezone as a string.
-        Attempts to retrieve the timezone using an external IP-based API. If successful,
-        caches and returns the timezone. If the API call fails or no timezone is found,
-        defaults to "UTC".
+        First tries to detect the timezone using Unix system files.
+        If unsuccessful, attempts to retrieve the timezone using an external IP-based API.
+        If all methods fail, defaults to "America/New_York".
         Returns:
-            str: The local timezone string, or "UTC" if detection fails.
-
+            str: The local timezone string, or "America/New_York" if detection fails.
         """
-
         if hasattr(self, "_local_timezone"):
             return self._local_timezone
+
+        # Try Unix system files
+        try:
+            tz_path = Path("/etc/timezone")
+            if tz_path.exists():
+                with tz_path.open("r", encoding="utf-8") as f:
+                    tz = f.read().strip()
+                    if tz:
+                        self._local_timezone = tz
+                        return tz
+            localtime_path = Path("/etc/localtime")
+            if localtime_path.exists():
+                # Try to resolve symlink to zoneinfo
+                try:
+                    resolved = localtime_path.resolve()
+                    parts = resolved.parts
+                    if "zoneinfo" in parts:
+                        idx = parts.index("zoneinfo")
+                        tz = "/".join(parts[idx+1:])
+                        if tz:
+                            self._local_timezone = tz
+                            return tz
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Fallback to external API
         try:
             with requests.urlopen("https://ipapi.co/timezone", timeout=5) as resp:
                 tz = resp.read().decode().strip()
@@ -70,9 +96,11 @@ class ProxmoxTimezoneHelper:
                     return tz
         except Exception:
             pass
-        self._local_timezone = "UTC"
-        return "UTC"  # last fallback
+
+        self._local_timezone = "America/New_York"
+        return "America/New_York"  # last fallback
 
     def _ensure_initialized(self):
         if self._timezones is None:
+            self._timezones = self.get_timezones()
             self._timezones = self.get_timezones()

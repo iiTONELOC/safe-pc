@@ -1,9 +1,8 @@
 from time import time
 from io import BytesIO
-from typing import Set
 from pathlib import Path
-from typing import Iterable
 from logging import getLogger
+from collections.abc import Iterable, Set
 from asyncio import to_thread as aio_to_thread
 from gzip import decompress as gzip_decompress
 from os import chdir, getcwd, walk as os_walk, chmod

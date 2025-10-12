@@ -2,11 +2,11 @@
 # discovery.sh : find first physical NIC + fastest disk and POST.
 
 # ---------- Config (templated) ----------
-DNS_IP="10.0.4.1"
-GATEWAY_IP="10.0.4.1"
-PROXMOX_IP="10.0.4.238/24"
-JOB_ID="315593f5-f971-4603-a46c-c98774edd512"
-CONFIG_SERVER="http://10.0.4.2:33007/api/prox/device_discovery"
+DNS_IP="{{dns}}"
+GATEWAY_IP="{{gw_ip}}"
+PROXMOX_IP="{{ip}}"
+JOB_ID="{{job_id}}"
+CONFIG_SERVER="http://{{config_server}}:33007/api/prox/device_discovery"
 
 ufind_disk_by_criteria() {
   required_rota="$1"  # can be "" for any, or 0/1

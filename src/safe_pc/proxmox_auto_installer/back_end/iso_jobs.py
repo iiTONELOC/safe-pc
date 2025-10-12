@@ -1,11 +1,12 @@
 import json
 import asyncio
-from uuid import uuid4
+from uuid import uuid4, UUID
 from typing import Literal
 from logging import getLogger
 
 from fastapi import WebSocket
 
+from safe_pc.proxmox_auto_installer.answer_file.cached_answers import CacheManager
 from safe_pc.proxmox_auto_installer.iso.iso import ModifiedProxmoxISO, ProxmoxISO
 from safe_pc.utils.utils import calculate_percentage
 
@@ -15,6 +16,8 @@ LOGGER = getLogger(
     if __name__ == "__main__"
     else __name__
 )
+
+
 job_status = Literal["pending", "in_progress", "completed", "failed"]
 
 
@@ -25,7 +28,9 @@ class JobStatus:
     FAILED = "failed"
 
 
-async def send_socket_update(ws: WebSocket, message: dict):
+from typing import Any
+
+async def send_socket_update(ws: WebSocket, message: dict[str, Any]):
     """Send a JSON message over the websocket safely."""
     try:
         await ws.send_text(json.dumps(message))
@@ -34,17 +39,18 @@ async def send_socket_update(ws: WebSocket, message: dict):
 
 
 class Job:
-    def __init__(self, info: str, job_id: uuid4 = None) -> None:
+    def __init__(self, info: str, job_id: UUID|None = None) -> None:
         self._lock = asyncio.Lock()
         self._stop_requested = False
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task[Any] | None = None
         self._socket: WebSocket | None = None
         self._proxmox_iso: ProxmoxISO | None = None
         self._modified_iso: ModifiedProxmoxISO | None = None
         self.info: str = info  # answer file as toml str
         self.install_progress: int = 0
-        self.job_id: uuid4 = job_id or uuid4()
+        self.job_id: UUID = job_id or uuid4()
         self.status: job_status = JobStatus.PENDING
+        self.cache = None
 
     async def update_status(self, new_status: job_status):
         async with self._lock:
@@ -75,7 +81,7 @@ class Job:
         async with self._lock:
             self._socket = None
 
-    async def to_json(self):
+    async def to_json(self) -> dict[str, str | int]:
         async with self._lock:
             return {
                 "job_id": str(self.job_id),
@@ -85,6 +91,7 @@ class Job:
             }
 
     async def run(self):
+        self.cache = await CacheManager.new()
         await self.update_status(JobStatus.IN_PROGRESS)
 
         async with self._lock:
@@ -94,9 +101,9 @@ class Job:
 
         # attempt to dl - skips if already done
         if not await self._proxmox_iso.download(
-            on_update=lambda p, msg: asyncio.create_task(
+            on_update=lambda p,t, msg: asyncio.create_task(
                 self.update_progress(
-                    calculate_percentage(p, 14),
+                    calculate_percentage(p, t),
                     msg or f"Downloading Proxmox ISO... {p}%",
                 )
             )
@@ -110,9 +117,7 @@ class Job:
         )
         LOGGER.info("Creating ModifiedProxmoxISO instance...")
 
-        self._modified_iso = ModifiedProxmoxISO(
-            self._proxmox_iso, str(self.job_id), str(self.job_id)
-        )
+        self._modified_iso = ModifiedProxmoxISO(self._proxmox_iso, str(self.job_id))
         try:
             modified_iso_path = await self._modified_iso.create_modified_iso(
                 answer_file=self.info,
@@ -123,6 +128,9 @@ class Job:
                     )
                 ),
             )
+            # save the answer file to cache
+            if modified_iso_path:
+                await self.cache.put_bytes(self.job_id, self.info.encode())
 
             LOGGER.info(f"Modified ISO path: {modified_iso_path}")
         except Exception as e:
@@ -147,12 +155,23 @@ class Job:
         LOGGER.info(f"Stopping job {self.job_id}...")
         self._stop_requested = True
         await self.on_finish(status=status, progress=progress)
-
-    async def on_finish(
-        self, status: job_status = JobStatus.COMPLETED, progress: int = 100
-    ):
+        
+    async def on_finish(self, status: job_status = JobStatus.COMPLETED, progress: int = 100):
         await self.update_status(status)
         await self.update_progress(progress)
+
+        if status == JobStatus.COMPLETED and self._modified_iso:
+            try:
+                # /.../data/isos  (NOT parent.parent)
+                isos_root = self._modified_iso.base_iso.iso_dir.parent
+                final_path = self._modified_iso.move_iso_to_final_location(final_dir=isos_root)
+                if self.cache:
+                    await self.cache.set_iso_path(self.job_id, final_path)  # STORE FILE PATH
+            except Exception as e:
+                LOGGER.error(f"Error moving ISO to final location: {e}")
+                await self.update_status(JobStatus.FAILED)
+                await self.update_progress(0)
+
         await remove_job(str(self.job_id))
         if self._socket:
             try:
@@ -163,6 +182,7 @@ class Job:
         if self._task:
             self._task.cancel()
             self._task = None
+
 
 
 # Registry

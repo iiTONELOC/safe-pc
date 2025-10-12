@@ -1,14 +1,16 @@
 from asyncio import run
 from pathlib import Path
 from sys import exit, argv
+import threading
+
 
 from safe_pc.utils import (
     TempKeyFile,
     get_local_ip,
-    read_dpapi_protected_key,
     handle_keyboard_interrupt,
 )
 from safe_pc.proxmox_auto_installer.utils import jwt_middleware
+from safe_pc.proxmox_auto_installer.back_end.routes.api.installer.http import HttpAPIRoutes
 from safe_pc.proxmox_auto_installer.back_end.routes.routes import PiRoutes
 
 from fastapi import FastAPI
@@ -27,6 +29,42 @@ _CURRENT_DIR = Path(__file__).resolve().parent
 _MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app"
 _DEV_MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app_dev"
 
+class HttpSever:
+    IP = get_local_ip()
+    PORT = 33007
+    
+    @staticmethod
+    def create_app() -> FastAPI:
+        """Create a new FastAPI app.
+
+        Returns:
+            FastAPI: The created FastAPI app instance.
+        """
+        app = FastAPI()
+        
+        HttpAPIRoutes.register(app=app)
+
+
+        return app
+    
+    @staticmethod
+    def run():
+        """Starts the server with the specified configuration.
+        """
+        setup_logging()
+       
+        try:
+            config = Config(
+                app=HttpSever.create_app(),
+                port=HttpSever.PORT,
+                host=f"{HttpSever.IP}",
+                log_level="info"
+            )
+            server = Server(config=config)
+            run(server.serve())
+        except Exception as e:
+            print(f"Error starting server: {e}")
+            exit(1)
 
 # Proxmox Install Server
 class PiServer:
@@ -63,6 +101,7 @@ class PiServer:
         ```python
             # Programmatically
             from safe_pc.proxmox_auto_installer.back_end.server import PiServer
+import threading
             PiServer.run(dev=True)   # For development mode w/ hot-reloading
             PiServer.run()           # For production mode
 
@@ -73,6 +112,7 @@ class PiServer:
         ```
         """
         app = FastAPI()
+    
         app.add_middleware(
             middleware_class=CORSMiddleware,
             allow_origins=PiServer.CORS_ORIGINS,
@@ -81,7 +121,6 @@ class PiServer:
             allow_headers=["*"],
         )
 
-        # Add JWT-Middleware here, to be used in routes
         app.middleware("http")(jwt_middleware)
         app.mount(
             path="/static",
@@ -115,8 +154,9 @@ class PiServer:
         """
         setup_logging()
         cert_dir = Path(__file__).resolve().parents[4] / "certs"
+        key_file_path = cert_dir / "safe-pc-key.pem"
         with TempKeyFile(
-            read_dpapi_protected_key(cert_dir / "safe-pc-key.pem")
+            key_file_path.read_bytes()
         ) as key_path:
             try:
                 config = Config(
@@ -132,8 +172,32 @@ class PiServer:
                 await server.serve()
             except Exception as e:
                 print(f"Error starting server: {e}")
-                exit(code=1)
+                exit(1)
 
+
+@handle_keyboard_interrupt
+def run_both_servers():
+    """
+    Entry point for running both the HTTP and Proxmox Install servers concurrently.
+    """
+
+    run(main=HttpSever.run()) #type: ignore
+    run(main=PiServer.run())
+    
+@handle_keyboard_interrupt
+def run_both_servers_dev():
+    """
+    Entry point for running both the HTTP and Proxmox Install servers in development mode with hot-reloading.
+    """
+
+    http_thread = threading.Thread(target=lambda: run(HttpSever.run()), daemon=True) #type: ignore
+    pi_thread = threading.Thread(target=lambda: run(PiServer.run()), daemon=True)
+
+    http_thread.start()
+    pi_thread.start()
+
+    http_thread.join()
+    pi_thread.join()
 
 @handle_keyboard_interrupt
 def main():
@@ -158,6 +222,6 @@ if __name__ == "__main__":
 
     args = argv
     if len(args) > 1 and args[1] == "dev":
-        main_dev()
+        run_both_servers_dev()
     else:
-        main()
+        run_both_servers()

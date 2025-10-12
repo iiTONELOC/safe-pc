@@ -1,9 +1,12 @@
+from typing import  Any
 from safe_pc.proxmox_auto_installer.constants import PROXMOX_ALLOWED_KEYBOARDS
 from safe_pc.proxmox_auto_installer.utils.tzd import ProxmoxTimezoneHelper
 from safe_pc.proxmox_auto_installer.utils.country_codes import ProxmoxCountryCodeHelper
 
 
-def get_installer_data():
+
+
+def get_installer_data() -> dict[str, dict[str, Any]]:
     """Get the data required for the installer settings page."""
     tz_helper = ProxmoxTimezoneHelper()
     cc_helper = ProxmoxCountryCodeHelper()

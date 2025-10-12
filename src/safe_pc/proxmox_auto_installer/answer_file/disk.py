@@ -1,3 +1,4 @@
+from typing import Any
 from re import compile as re_compile
 from pydantic import BaseModel, Field, field_validator
 from safe_pc.proxmox_auto_installer.constants import (
@@ -11,11 +12,13 @@ FILESYSTEM_PATTERN = re_compile(r"^(ext4|xfs|zfs|btrfs)$")
 BTRFS_RAID_PATTERN = re_compile(r"^(raid0|raid1|raid10)$")
 ZFS_RAID_PATTERN = re_compile(r"^(raid0|raid1|raid10|raidz-1|raidz-2|raidz-3)$")
 
-DISK_CONFIG_DEFAULTS = {
+
+
+DISK_CONFIG_DEFAULTS: dict[str, Any] = {
     "filesystem": "zfs",
     "zfs_raid": "raid0",
     "btrfs_raid": None,
-    "disk_list": ["/dev/sda"],
+    "disk_list": ["/dev/nvme0n1", "/dev/nvme0n2", "/dev/sda", "/dev/sdb"],
 }
 
 

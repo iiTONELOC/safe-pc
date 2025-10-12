@@ -1,7 +1,8 @@
 """
 Description: This module provides reusable async cryptographic utilities.
 """
-
+import asyncio, base64, hashlib
+from pathlib import Path
 from re import match
 from logging import getLogger
 from hashlib import sha256, sha512
@@ -154,3 +155,30 @@ def validate_sha512(sha512: str) -> bool:
 
     pattern = r"^[a-fA-F0-9]{128}$"
     return bool(match(pattern, sha512))
+
+
+async def cert_sha256_fingerprint(path: str, colon:bool=True, upper:bool=True):
+    """Return the SHA-256 fingerprint of a certificate file (PEM or DER)."""
+
+    data = await asyncio.to_thread(Path(path).read_bytes)
+
+    BEGIN = b"-----BEGIN CERTIFICATE-----"
+    END   = b"-----END CERTIFICATE-----"
+
+    # If PEM, extract first cert block and decode to DER; else treat as DER
+    if data.lstrip().startswith(BEGIN):
+        i = data.find(BEGIN)
+        j = data.find(END, i)
+        if i < 0 or j < 0:
+            raise ValueError("Invalid PEM certificate")
+        b64 = b"".join(data[i+len(BEGIN):j].split())
+        der = base64.b64decode(b64, validate=False)
+    else:
+        der = data
+
+    h = hashlib.sha256(der).hexdigest()
+    if upper:
+        h = h.upper()
+    if colon:
+        h = ":".join(h[i:i+2] for i in range(0, len(h), 2))
+    return h

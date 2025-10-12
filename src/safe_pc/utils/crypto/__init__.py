@@ -1,3 +1,4 @@
+import os
 from safe_pc.utils.crypto.crypto import (
     compute_sha256,
     compute_sha512,
@@ -6,10 +7,8 @@ from safe_pc.utils.crypto.crypto import (
     validate_sha256,
     validate_sha512,
 )
-from safe_pc.utils.crypto.dpapi import (
-    write_dpapi_protected_key,
-    read_dpapi_protected_key,
-)
+
+
 from safe_pc.utils.crypto.X509 import (
     SAFE_PC_CERT_DEFAULTS,
     generate_self_signed_cert,
@@ -27,8 +26,16 @@ __all__ = [
     "validate_sha512",
     "password_entropy",
     "SAFE_PC_CERT_DEFAULTS",
-    "is_high_entropy_password",
-    "write_dpapi_protected_key",
-    "read_dpapi_protected_key",
+    "is_high_entropy_password",   
     "generate_self_signed_cert",
 ]
+
+if os.name == "nt":
+    from safe_pc.utils.crypto.dpapi import (
+        write_dpapi_protected_key,
+        read_dpapi_protected_key,
+    )
+    
+    __all__.push("read_dpapi_protected_key")
+    __all__.push("write_dpapi_protected_key")
+
