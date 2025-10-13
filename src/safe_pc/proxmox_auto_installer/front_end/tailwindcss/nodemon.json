@@ -1,0 +1,17 @@
+{
+  "watch": [
+    "front_end/templates",
+    "front_end/static/js",
+    "front_end/static/css",
+    "front_end/tailwindcss/styles"
+  ],
+  "ignore": [
+    "front_end/static/images",
+    "front_end/tailwindcss/node_modules",
+    "front_end/tailwindcss/package-lock.json",
+    "front_end/tailwindcss/package.json",
+    "data/cached_answers"
+  ],
+  "ext": "js,html,css",
+  "exec": "curl -k -s --max-time 3 -X POST https://10.0.4.2:33008/trigger-reload "
+}

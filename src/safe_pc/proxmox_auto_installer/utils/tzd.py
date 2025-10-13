@@ -1,4 +1,4 @@
-import urllib.request as requests
+import os
 from pathlib import Path
 from locale import getlocale
 
@@ -58,44 +58,35 @@ class ProxmoxTimezoneHelper:
         Returns:
             str: The local timezone string, or "America/New_York" if detection fails.
         """
-        if hasattr(self, "_local_timezone"):
-            return self._local_timezone
-
-        # Try Unix system files
-        try:
-            tz_path = Path("/etc/timezone")
-            if tz_path.exists():
-                with tz_path.open("r", encoding="utf-8") as f:
-                    tz = f.read().strip()
-                    if tz:
-                        self._local_timezone = tz
+        
+        #use timedatectl
+        tz_show_out = os.popen("timedatectl show -p Timezone").read().strip()
+        if tz_show_out and "=" in tz_show_out:
+            tz = tz_show_out.split("=")[-1].strip()
+            if tz in self._timezones: #type: ignore
+                return tz
+ 
+        # if that fails, try to read /etc/timezone
+        etc_tz = Path("/etc/timezone")
+        if etc_tz.exists():
+            tz = etc_tz.read_text().strip()
+            if tz in self._timezones: #type: ignore
+                return tz
+            
+        # if that fails, try to read /etc/localtime symlink
+        etc_localtime = Path("/etc/localtime")
+        if etc_localtime.exists() and etc_localtime.is_symlink():
+            try:
+                tz_path = os.readlink(etc_localtime)
+                if "zoneinfo" in tz_path:
+                    tz = tz_path.split("zoneinfo")[-1].lstrip("/")
+                    if tz in self._timezones: #type: ignore
                         return tz
-            localtime_path = Path("/etc/localtime")
-            if localtime_path.exists():
-                # Try to resolve symlink to zoneinfo
-                try:
-                    resolved = localtime_path.resolve()
-                    parts = resolved.parts
-                    if "zoneinfo" in parts:
-                        idx = parts.index("zoneinfo")
-                        tz = "/".join(parts[idx+1:])
-                        if tz:
-                            self._local_timezone = tz
-                            return tz
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-        # Fallback to external API
-        try:
-            with requests.urlopen("https://ipapi.co/timezone", timeout=5) as resp:
-                tz = resp.read().decode().strip()
-                if tz:
-                    self._local_timezone = tz
-                    return tz
-        except Exception:
-            pass
+            except Exception as e:
+                print("Error reading /etc/localtime symlink:", e)
+        
+        # if that fails, use default
+        
 
         self._local_timezone = "America/New_York"
         return "America/New_York"  # last fallback

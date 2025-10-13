@@ -48,7 +48,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     submitBtn,
     emailInput,
     emailError,
-    spinnerText,
     createIsoBtn,
     sourceSelect,
     gatewayError,
@@ -136,6 +135,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       handleSubmitBtnDisabledState(submitBtn, passwordValidated);
     });
   }
+
+
+  // handle changes for the keyboard, country, and timezone selects
+  [keyboardSelect, countrySelect, timezoneSelect].forEach((select) => {
+    select.addEventListener("change", () => {
+      formState.global[select.name] = select.value || null;
+    });
+  });
 
   // watch for changes to source select - enable/disable relevant fields
   sourceSelect.addEventListener("change", (_) => {

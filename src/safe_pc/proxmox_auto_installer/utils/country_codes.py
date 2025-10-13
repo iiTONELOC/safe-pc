@@ -13,7 +13,7 @@ def _get_country_codes() -> dict[str, str]:
         # split by new lines and filter out empty lines
         lines = [line.strip() for line in file.split("\n") if line.strip()]
         # split each line by comma and create a dictionary
-        country_codes = {}
+        country_codes: dict[str, str] = {}
         for line in lines:
             parts = line.split(":")
             if len(parts) == 2:
@@ -34,6 +34,8 @@ class ProxmoxCountryCodeHelper:
 
     def get_country_codes(self) -> dict[str, str]:
         self._ensure_initialized()
+        if self._country_codes is None:
+            raise RuntimeError("Country codes not initialized properly.")
         return self._country_codes
 
     def get_country_codes_list(self) -> list[str]:
@@ -43,7 +45,7 @@ class ProxmoxCountryCodeHelper:
             list[str]: List of country codes (e.g., ['US', 'GB', 'FR']).
         """
         self._ensure_initialized()
-        return [v.lower() for v in self._country_codes.values()]
+        return [v.lower() for v in self._country_codes.values()] #type: ignore
 
     def get_country_name(self, code: str) -> str | None:
         """Get the country name for a given country code.
@@ -54,10 +56,10 @@ class ProxmoxCountryCodeHelper:
             str | None: The country name if found, otherwise None.
         """
         self._ensure_initialized()
-        return self._country_codes.get(code)
+        return self._country_codes.get(code) #type: ignore
 
     def _ensure_initialized(self):
         if self._country_codes is None:
             self._country_codes = _get_country_codes()
-        if self._country_codes is None:
+        if self._country_codes is None: #type: ignore
             raise RuntimeError("Country codes not initialized properly.")

@@ -122,7 +122,10 @@ class CacheManager:
 
     def get_iso_path(self, job_id: str) -> Path | None:
         """Return the absolute path to the ISO file for a given job_id, if it exists."""
-        p = Path(self._manifest["isos"].get(job_id, ""))
+        path_str = self._manifest["isos"].get(job_id)
+        if not path_str:
+            return None
+        p = Path(path_str)
         return p if p.exists() else None
 
     async def delete_iso(self, job_id: str, remove_file:bool=False):

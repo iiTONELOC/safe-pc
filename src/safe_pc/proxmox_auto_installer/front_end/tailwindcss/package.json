@@ -4,7 +4,7 @@
   "description": "Tailwindcss module for Proxmox Auto Installer",
   "scripts": {
     "build": "tailwindcss -i ./styles/app.css -o ../static/css/tailwind.css --minify",
-    "dev": "concurrently -n TAILWIND,PYTHON,RELOAD -c yellow,blue,green \"npx tailwindcss -i ./styles/app.css -o ../static/css/tailwind.css --watch\" \"nodemon --watch ../../back_end --ext py --exec \\\"python ../../back_end/server.py dev\\\"\" \"nodemon --watch ../../front_end/**/* --ext js,html,css --exec \\\"curl -k -s -X POST https://10.0.4.2:33008/trigger-reload\\\"\""
+    "dev": "concurrently -n TAILWIND,PYTHON,RELOAD -c yellow,blue,green \"npx tailwindcss -i ./styles/app.css -o ../static/css/tailwind.css --watch\" \"nodemon --watch ../../back_end --ext py --exec \\\"python ../../back_end/server.py dev\\\"\" \"nodemon --config ./nodemon.json\""
   },
   "keywords": [],
   "author": "Anthony Tropeano",

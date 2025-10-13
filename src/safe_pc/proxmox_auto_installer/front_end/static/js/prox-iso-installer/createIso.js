@@ -60,11 +60,12 @@ export async function createIso(
   /**
    * Handle WebSocket closure.
    */
-  const handleSocketClose = (event) => {
+  const handleSocketClose = (event, jobId) => {
     if (event.wasClean) {
       console.log(
         `WebSocket closed cleanly, code=${event.code} reason=${event.reason}`
       );
+
     } else {
       console.warn("WebSocket closed unexpectedly");
     }
@@ -74,6 +75,7 @@ export async function createIso(
       hide(loadingSpinner);
       submitBtn.disabled = false;
       closeBtn.click();
+      window.location.href = `iso-download/${jobId}`;
     }, 1500);
   };
 
@@ -105,26 +107,30 @@ export async function createIso(
     };
 
     socket.onmessage = handleSocketMessage;
-    socket.onclose = handleSocketClose;
+    socket.onclose = (event)=>handleSocketClose(event, jobId);
     socket.onerror = handleSocketError;
   };
 
   // ---- Execute the ISO creation request ----
   try {
     const result = await handleCreateIso(formState);
+    // register the custom event listener for when the ISO creation finishes
+  
 
+       const { jobId } = result;
     if (!result?.status) {
       showAlert(result.error || "Error creating ISO");
       setTimeout(() => {
         hide(loadingSpinner);
         submitBtn.disabled = false;
         closeBtn.click();
+          window.location.href = `iso-download/${jobId}`;
       }, 6800);
       return;
     }
 
-    const { jobId } = result;
-    console.log(`ISO creation started. Job ID: ${jobId}`);
+ 
+
     openSocket(jobId);
   } catch (error) {
     console.error("Error creating ISO:", error);

@@ -8,6 +8,7 @@ from safe_pc.proxmox_auto_installer.back_end.helpers import DevHelpers
 from safe_pc.proxmox_auto_installer.utils.tzd import ProxmoxTimezoneHelper
 from safe_pc.proxmox_auto_installer.constants import PROXMOX_ALLOWED_KEYBOARDS
 from safe_pc.proxmox_auto_installer.back_end.iso_jobs import Job, below_max_jobs
+from safe_pc.proxmox_auto_installer.answer_file.cached_answers import CacheManager
 from safe_pc.proxmox_auto_installer.utils.country_codes import ProxmoxCountryCodeHelper
 from safe_pc.proxmox_auto_installer.back_end.iso_jobs import get_job, send_socket_update
 from safe_pc.proxmox_auto_installer.answer_file.answer_file import (
@@ -18,7 +19,7 @@ from safe_pc.proxmox_auto_installer.answer_file.answer_file import (
 from passlib.hash import sha512_crypt
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 
 LOGGER = getLogger(__name__)
@@ -79,7 +80,7 @@ class HttpsRoutes:
             # generate a new jwt for the session if needed
 
             response = templates.TemplateResponse(
-                name="/pages/main/index.html",
+                name="/pages/main.html",
                 context={
                     "request": request,
                     "start_year": HttpsRoutes.START_YEAR,
@@ -88,14 +89,30 @@ class HttpsRoutes:
             )
 
             return response
+        
+        @app.get(path="/iso-download/{job_id}", response_class=HTMLResponse)
+        async def iso_download_page(request: Request, job_id: str): # type: ignore
+            # generate a new jwt for the session if needed
+
+            response = templates.TemplateResponse(
+                name="/pages/iso-download.html",
+                context={
+                    "request": request,
+                    "start_year": HttpsRoutes.START_YEAR,
+                    "current_year": HttpsRoutes.CURRENT_YEAR,
+                    "job_id": job_id,
+                },
+            )
+
+            return response
 
         # Development mode features - hot-reloading, etc.
-        if dev:
-            DevHelpers.handle_dev_hot_reload(app=app, templates=templates)# type: ignore
+        
+        DevHelpers.handle_dev_hot_reload(app=app, templates=templates)# type: ignore
             
         
           # return a 200 hello work json response for testing
-        @app.get(path="/api/installer/data")
+        @app.get(path="/api/installer/data", response_class=JSONResponse)
         def get_installer_data_route() -> dict[str, dict[str, Any]]: # type: ignore
             """Get the data required for the installer settings page."""
             tz_helper = ProxmoxTimezoneHelper()
@@ -118,7 +135,7 @@ class HttpsRoutes:
                 }
             }
 
-        @app.post(path="/api/installer/iso")
+        @app.post(path="/api/installer/iso" ,response_class=JSONResponse)
         async def installer_iso_route(request: Request):# type: ignore
             try:
                 # ensure we are below the max job limit
@@ -160,8 +177,27 @@ class HttpsRoutes:
                 )
 
 
+        # iso-download route
+        @app.get(path="/api/iso-download/{job_id}")
+        async def iso_download_route(request: Request, job_id: str):# type: ignore
+            try:
+                cache = await CacheManager.new()
+                iso_path =  cache.get_iso_path(job_id)
+                if not iso_path:
+                    raise FileNotFoundError("ISO not found for the given job ID.")
+                return FileResponse(
+                    path=iso_path,
+                    filename=f"proxmox-ve-custom-{job_id}.iso",
+                    media_type="application/octet-stream",
+                )
+            except Exception as _:
+                LOGGER.error(f"Error processing ISO download request: {_}")
+                return JSONResponse(
+                    content={"error": f"Internal Server Error: {_}"}, status_code=500
+                )
+        
         # websocket route for job status updates
-        @app.websocket("/api/ws/iso")
+        @app.websocket("/api/ws/iso" )
         async def installer_iso_ws_route(websocket: WebSocket):# type: ignore
 
             await websocket.accept()
