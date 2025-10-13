@@ -1,7 +1,6 @@
-
 from pathlib import Path
 from safe_pc.utils import get_local_ip
-#from safe_pc.utils.crypto.crypto import cert_sha256_fingerprint
+
 def ensure_flag_file(path: Path, flag_name: str) -> None:
     flag_file = path / flag_name
     if not flag_file.exists():
@@ -26,16 +25,8 @@ def create_answer_file(
     return answer_file_path.__str__()
 
 
-# async def _get_cert_fingerprint() -> str:
-#     # cert folder is at the project root/certs
-#     cert_path = Path(__file__).parents[4] / "certs" / "safe-pc-cert.pem"
-#     if not cert_path.exists():
-#         raise FileNotFoundError(f"Certificate file not found: {cert_path}")
 
-#     return await cert_sha256_fingerprint(cert_path.__str__())
-
-
-async def create_auto_installer_mode_file(
+def create_auto_installer_mode_file(
     path_to_unpacked_iso: Path,
     job_id: str,
     verify_flag: bool = True,

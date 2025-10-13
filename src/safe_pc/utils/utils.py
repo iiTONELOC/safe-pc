@@ -5,8 +5,6 @@ from typing import Any
 from pathlib import Path
 from dataclasses import dataclass
 from collections.abc import Mapping, Sequence
-
-
 from socket import gethostname, gethostbyname
 
 

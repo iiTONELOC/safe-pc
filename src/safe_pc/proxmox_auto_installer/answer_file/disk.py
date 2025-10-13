@@ -66,8 +66,8 @@ class DiskConfig(BaseModel):
         return value
 
     @field_validator("zfs_raid", mode="before")
-    def validate_zfs_raid_required(cls, raid_value, values):
-        fs = values.data.get("filesystem")
+    def validate_zfs_raid_required(cls, raid_value, values): # type: ignore
+        fs = values.data.get("filesystem") # type: ignore
         if fs == "zfs":
             if raid_value is None:
                 raise ValueError(
@@ -75,7 +75,7 @@ class DiskConfig(BaseModel):
                 )
             if raid_value not in PROXMOX_ALLOWED_ZFS_RAID:
                 raise ValueError(f"Invalid ZFS RAID configuration: {raid_value}")
-        return raid_value
+        return raid_value# type: ignore
 
     @field_validator("zfs_raid")
     def validate_zfs_raid_pattern(cls, value: str | None):
@@ -84,8 +84,8 @@ class DiskConfig(BaseModel):
         return value
 
     @field_validator("btrfs_raid", mode="before")
-    def validate_btrfs_raid_required(cls, raid_value, values):
-        fs = values.data.get("filesystem")
+    def validate_btrfs_raid_required(cls, raid_value, values):# type: ignore
+        fs = values.data.get("filesystem")# type: ignore
         if fs == "btrfs":
             if raid_value is None:
                 raise ValueError(
@@ -93,7 +93,7 @@ class DiskConfig(BaseModel):
                 )
             if raid_value not in PROXMOX_ALLOWED_BTRFS_RAID:
                 raise ValueError(f"Invalid Btrfs RAID configuration: {raid_value}")
-        return raid_value
+        return raid_value# type: ignore
 
     @field_validator("btrfs_raid")
     def validate_btrfs_raid_pattern(cls, value: str | None):
@@ -108,17 +108,17 @@ class DiskConfig(BaseModel):
         return disk_list_value
 
     @field_validator("disk_list")
-    def validate_disk_list_paths(cls, disk_list_value: list[str], values):
+    def validate_disk_list_paths(cls, disk_list_value: list[str], values):# type: ignore
         for disk in disk_list_value:
             if not DISK_PATH_PATTERN.match(disk):
                 raise ValueError(f"Invalid disk path: {disk}")
 
-        fs = values.data.get("filesystem")
+        fs = values.data.get("filesystem")# type: ignore
         raid = None
         if fs == "zfs":
-            raid = values.data.get("zfs_raid")
+            raid = values.data.get("zfs_raid")# type: ignore
         elif fs == "btrfs":
-            raid = values.data.get("btrfs_raid")
+            raid = values.data.get("btrfs_raid")# type: ignore
 
         raid_disk_requirements = {
             "zfs": {

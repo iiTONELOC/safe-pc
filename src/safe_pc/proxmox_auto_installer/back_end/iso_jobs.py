@@ -130,7 +130,7 @@ class Job:
             )
             # save the answer file to cache
             if modified_iso_path:
-                await self.cache.put_bytes(self.job_id, self.info.encode())
+                await self.cache.put_answer_bytes(self.job_id.__str__(), self.info.encode())
 
             LOGGER.info(f"Modified ISO path: {modified_iso_path}")
         except Exception as e:
@@ -166,7 +166,7 @@ class Job:
                 isos_root = self._modified_iso.base_iso.iso_dir.parent
                 final_path = self._modified_iso.move_iso_to_final_location(final_dir=isos_root)
                 if self.cache:
-                    await self.cache.set_iso_path(self.job_id, final_path)  # STORE FILE PATH
+                    await self.cache.set_iso_path(self.job_id.__str__(), final_path)  # STORE FILE PATH
             except Exception as e:
                 LOGGER.error(f"Error moving ISO to final location: {e}")
                 await self.update_status(JobStatus.FAILED)

@@ -1,4 +1,3 @@
-import os
 from safe_pc.utils.crypto import (
     TempKeyFile,
     compute_sha256,
@@ -22,7 +21,6 @@ from safe_pc.utils.utils import (
     run_command_async,
     calculate_percentage,
     handle_keyboard_interrupt,
-
 )
 
 from safe_pc.utils.logs import (
@@ -52,11 +50,3 @@ __all__ = [
     "handle_keyboard_interrupt",
 ]
 
-if os.name == "nt":
-    from safe_pc.utils.crypto.dpapi import (
-        write_dpapi_protected_key,
-        read_dpapi_protected_key,
-    )
-
-    __all__.append("read_dpapi_protected_key")
-    __all__.append("write_dpapi_protected_key")

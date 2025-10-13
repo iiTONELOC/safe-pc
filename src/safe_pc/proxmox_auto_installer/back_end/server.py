@@ -1,7 +1,7 @@
+import threading
 from asyncio import run
 from pathlib import Path
 from sys import exit, argv
-import threading
 
 
 from safe_pc.utils import (
@@ -10,8 +10,9 @@ from safe_pc.utils import (
     handle_keyboard_interrupt,
 )
 from safe_pc.proxmox_auto_installer.utils import jwt_middleware
-from safe_pc.proxmox_auto_installer.back_end.routes.api.installer.http import HttpAPIRoutes
-from safe_pc.proxmox_auto_installer.back_end.routes.routes import PiRoutes
+
+from safe_pc.proxmox_auto_installer.back_end.https_routes import HttpsRoutes
+from safe_pc.proxmox_auto_installer.back_end.http_routes import HttpAPIRoutes
 
 from fastapi import FastAPI
 from dotenv import load_dotenv
@@ -26,10 +27,10 @@ from safe_pc.utils.logs import setup_logging
 load_dotenv()
 
 _CURRENT_DIR = Path(__file__).resolve().parent
-_MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app"
-_DEV_MAIN = "safe_pc.proxmox_auto_installer.back_end.server:PiServer.create_app_dev"
+_MAIN = "safe_pc.proxmox_auto_installer.back_end.server:ProxHttpsServer.create_app"
+_DEV_MAIN = "safe_pc.proxmox_auto_installer.back_end.server:ProxHttpsServer.create_app_dev"
 
-class HttpSever:
+class ProxHttpSever:
     IP = get_local_ip()
     PORT = 33007
     
@@ -55,9 +56,9 @@ class HttpSever:
        
         try:
             config = Config(
-                app=HttpSever.create_app(),
-                port=HttpSever.PORT,
-                host=f"{HttpSever.IP}",
+                app=ProxHttpSever.create_app(),
+                port=ProxHttpSever.PORT,
+                host=f"{ProxHttpSever.IP}",
                 log_level="info"
             )
             server = Server(config=config)
@@ -67,7 +68,7 @@ class HttpSever:
             exit(1)
 
 # Proxmox Install Server
-class PiServer:
+class ProxHttpsServer:
     IP = get_local_ip()
     CORS_ORIGINS = [
         f"https://{IP}",
@@ -100,10 +101,10 @@ class PiServer:
         Usage:
         ```python
             # Programmatically
-            from safe_pc.proxmox_auto_installer.back_end.server import PiServer
-import threading
-            PiServer.run(dev=True)   # For development mode w/ hot-reloading
-            PiServer.run()           # For production mode
+            from safe_pc.proxmox_auto_installer.back_end.server import ProxHttpsServer
+            import threading
+            ProxHttpsServer.run(dev=True)   # For development mode w/ hot-reloading
+            ProxHttpsServer.run()           # For production mode
 
             # As a module
             # Note: `python` might be `python3` or `py` on some systems
@@ -115,7 +116,7 @@ import threading
     
         app.add_middleware(
             middleware_class=CORSMiddleware,
-            allow_origins=PiServer.CORS_ORIGINS,
+            allow_origins=ProxHttpsServer.CORS_ORIGINS,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
@@ -124,12 +125,12 @@ import threading
         app.middleware("http")(jwt_middleware)
         app.mount(
             path="/static",
-            app=StaticFiles(directory=PiServer.STATIC_DIR),
+            app=StaticFiles(directory=ProxHttpsServer.STATIC_DIR),
             name="static",
         )
 
         # attaches the CSP middleware and the routes
-        PiRoutes.register(app=app, templates=PiServer.TEMPLATES, dev=dev)
+        HttpsRoutes.register(app=app, templates=ProxHttpsServer.TEMPLATES, dev=dev)
 
         return app
 
@@ -140,7 +141,7 @@ import threading
         Returns:
             FastAPI: a FastAPI app with development features enabled.
         """
-        return PiServer.create_app(dev=True)
+        return ProxHttpsServer.create_app(dev=True)
 
     @staticmethod
     async def run(dev: bool = False):
@@ -162,7 +163,7 @@ import threading
                 config = Config(
                     app=(_DEV_MAIN if dev else _MAIN),
                     port=33008,
-                    host=f"{PiServer.IP}",
+                    host=f"{ProxHttpsServer.IP}",
                     factory=True,
                     log_level="info",
                     ssl_keyfile=str(object=key_path),
@@ -175,37 +176,19 @@ import threading
                 exit(1)
 
 
-@handle_keyboard_interrupt
-def run_both_servers():
-    """
-    Entry point for running both the HTTP and Proxmox Install servers concurrently.
-    """
 
-    run(main=HttpSever.run()) #type: ignore
-    run(main=PiServer.run())
-    
-@handle_keyboard_interrupt
-def run_both_servers_dev():
-    """
-    Entry point for running both the HTTP and Proxmox Install servers in development mode with hot-reloading.
-    """
-
-    http_thread = threading.Thread(target=lambda: run(HttpSever.run()), daemon=True) #type: ignore
-    pi_thread = threading.Thread(target=lambda: run(PiServer.run()), daemon=True)
-
-    http_thread.start()
-    pi_thread.start()
-
-    http_thread.join()
-    pi_thread.join()
 
 @handle_keyboard_interrupt
 def main():
     """
-    Entry point for the server application. Initializes and runs the PiServer.
+    Entry point for the backend servers
     """
 
-    run(main=PiServer.run())
+    # Used for Answer File Discovery and Download
+    run(main=ProxHttpSever.run()) #type: ignore
+    # Used for Proxmox Installer Interface and API
+    run(main=ProxHttpsServer.run())
+    
 
 
 @handle_keyboard_interrupt
@@ -214,14 +197,21 @@ def main_dev():
     Entry point for running the server in development mode with hot-reloading.
     """
 
-    run(main=PiServer.run(dev=True))
+    
+    answer_server_thread = threading.Thread(target=lambda: run(ProxHttpSever.run()), daemon=True) #type: ignore
+    ui_api_server_thread = threading.Thread(target=lambda: run(ProxHttpsServer.run()), daemon=True)
 
+    answer_server_thread.start()
+    ui_api_server_thread.start()
+
+    answer_server_thread.join()
+    ui_api_server_thread.join()
 
 # If running directly as a script, start the server
 if __name__ == "__main__":
 
     args = argv
     if len(args) > 1 and args[1] == "dev":
-        run_both_servers_dev()
+        main_dev()
     else:
-        run_both_servers()
+        main()

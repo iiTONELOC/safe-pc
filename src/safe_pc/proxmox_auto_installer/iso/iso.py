@@ -1,12 +1,8 @@
-import shutil
-import aiofiles
-from os import chmod
 from uuid import uuid4
 from typing import Any
 from pathlib import Path
 from logging import getLogger
 from collections.abc import Callable
-from safe_pc.utils import get_local_ip
 from safe_pc.proxmox_auto_installer.iso.helpers import (
     create_answer_file,
     create_auto_installer_mode_file,
@@ -18,8 +14,6 @@ from safe_pc.proxmox_auto_installer.iso.tools import (
     xorriso_repack_iso,
     replace_initrd_file
 )
-from safe_pc.proxmox_auto_installer.answer_file.answer_file import create_answer_file_from_toml, ProxmoxAnswerFile, NETWORK_CONFIG_DEFAULTS
-
 from safe_pc.utils import setup_logging, verify_sha256, handle_keyboard_interrupt
 from safe_pc.proxmox_auto_installer.iso.downloader import (
     validate_iso_url,
@@ -29,7 +23,7 @@ from safe_pc.proxmox_auto_installer.iso.downloader import (
     get_latest_proxmox_iso_url,
 )
 
-
+TOTAL_STEPS = 12
 class ProxmoxISO:
     """
     Represents a Proxmox ISO image with metadata and download utilities.
@@ -67,7 +61,7 @@ class ProxmoxISO:
         Returns:
             bool: True if the ISO is successfully downloaded or already valid, False otherwise.
         """
-        await on_update(0,14 ,"Fetching latest Proxmox ISO URL...") 
+        await on_update(0, TOTAL_STEPS ,"Fetching latest Proxmox ISO URL...") 
         if not validate_iso_url(self.url):
             raise ValueError(f"Invalid ISO URL: {self.url}")
 
@@ -75,13 +69,13 @@ class ProxmoxISO:
             self.iso_path, self.sha256 or ""
         ):
             self.downloaded = True
-            await on_update(4,14, "ISO already downloaded and verified.")
+            await on_update(4, TOTAL_STEPS, "ISO already downloaded and verified.")
             return True
 
         self.iso_dir.mkdir(parents=True, exist_ok=True)
-        await on_update(1,14, "Starting Download") 
+        await on_update(0, TOTAL_STEPS, "Starting Download") 
         await handle_iso_download(self.url, self.iso_path, on_update)
-        await on_update(3,14, "Download complete, verifying...") 
+        await on_update(TOTAL_STEPS, TOTAL_STEPS, "Download complete, verifying...") 
         if self.sha256 and not await verify_sha256(
             for_file_path=str(self.iso_path), expected_hash=self.sha256
         ):
@@ -89,7 +83,7 @@ class ProxmoxISO:
             self.LOGGER.warning(
                 "SHA256 hash mismatch after download. Removed invalid ISO."
             )
-        await on_update(4,14, "ISO verified successfully.")
+        await on_update(TOTAL_STEPS, TOTAL_STEPS, "ISO verified successfully.")
         return self.iso_path.exists()
 
 
@@ -145,7 +139,7 @@ class ModifiedProxmoxISO:
 
         # 6. Create the auto-installer-mode.toml file
         await on_update(6, "Creating auto-installer-mode.toml...")
-        await create_auto_installer_mode_file(
+        create_auto_installer_mode_file(
             path_to_unpacked_iso=self.extracted_iso_dir,
             job_id=self.job_id,
             verify_flag=True,
@@ -154,7 +148,6 @@ class ModifiedProxmoxISO:
         self.LOGGER.info("Created auto-installer-mode.toml")
 
         # 7. Extract initrd.img
-       
         await on_update(7, "Extracting initrd.img...")
 
         ok = await unpack_initrd(
@@ -168,8 +161,7 @@ class ModifiedProxmoxISO:
 
         self.LOGGER.info(f"Extracted initrd.img to {self.extracted_ram_disk}")
 
-        # 8. Add answer file
-      
+        # 8. Add answer file      
         await on_update(8, "Adding answer file to initrd...")
         create_answer_file(
             path_to_unpacked_iso=self.extracted_ram_disk,
@@ -178,73 +170,9 @@ class ModifiedProxmoxISO:
         )
 
         self.LOGGER.info("Added answer file to initrd")
-        # 9. Discovery script
-        # need to grab dns, gateway, ip, from the answer file
-        _answer_obj:ProxmoxAnswerFile = create_answer_file_from_toml(answer_file)
-        newtwork = _answer_obj.network
-        
-        dns = newtwork.dns or NETWORK_CONFIG_DEFAULTS["dns"]
-        gw_ip = newtwork.gateway or NETWORK_CONFIG_DEFAULTS["gateway"]
-        ip = newtwork.cidr or NETWORK_CONFIG_DEFAULTS["cidr"]       
-        
-        
-        await on_update(9, "Adding discovery script to initrd...")
-        discovery_script_path = Path(__file__).parent / "bash_scripts" / "discovery.t.sh"
-        # read the script and replace the placeholders with actual values
-        script_contents = ""
-        async with aiofiles.open(discovery_script_path, mode="r") as f:
-            script_contents = await f.read()
-                
-            script_contents = script_contents.replace("{{dns}}", dns)
-            script_contents = script_contents.replace("{{gw_ip}}", gw_ip)
-            script_contents = script_contents.replace("{{ip}}", ip)
-            script_contents = script_contents.replace("{{config_server}}", get_local_ip())
-            script_contents = script_contents.replace("{{job_id}}", self.job_id)
-        
-        discovery_script_path = Path(__file__).parent / "bash_scripts" / "discovery.sh"
-        
-        # write the modified script contents
-        async with aiofiles.open(discovery_script_path, mode="w") as f:
-            await f.write(script_contents)
-        self.LOGGER.info(
-            f"Copying discovery script from {discovery_script_path} to: {self.extracted_ram_disk}"
-        )
-        shutil.copy(
-            src=discovery_script_path,
-            dst=self.extracted_ram_disk / "discovery.sh",
-        )
-        self.LOGGER.info("Added discovery script to initrd, setting executable bit")
-        (self.extracted_ram_disk / "discovery.sh").chmod(0o755)
-
-        # 10. Modify init
-   
-        await on_update(10, "Modifying initrd init script...")
-
-        self.LOGGER.info("Modifying init script to run discovery script")
-        init_file_path = self.extracted_ram_disk / "init"
-        async with aiofiles.open(init_file_path, mode="r") as f:
-            init_contents = await f.readlines()
-
-        for i, line in enumerate(init_contents):
-            if line.strip().startswith("INSTALLER_SQFS="):
-                init_contents.insert(
-                    i + 1, '\necho "[*] Running discovery script..."\n'
-                )
-                init_contents.insert(i + 2, "chmod +x discovery.sh\n")
-                init_contents.insert(i + 3, "/discovery.sh\n")
-                init_contents.insert(i + 4, 'echo "[*] Discovery script finished."\n')
-                break
-
-        async with aiofiles.open(init_file_path, mode="w") as f:
-            await f.writelines(init_contents)
-
-        # ensure init is executable
-        chmod(init_file_path, 0o755)
-
-        self.LOGGER.info("Modified init script successfully, repacking initrd.img")
-        # 11. Repack initrd.img
+      
      
-        await on_update(11, "Repacking initrd.img...")
+        await on_update(9, "Repacking initrd.img...")
     
         ok = await repack_initrd(
             unpacked_initrd_dir=self.extracted_ram_disk,
@@ -260,7 +188,7 @@ class ModifiedProxmoxISO:
         )
         # 12. Replace initrd.img in boot
         
-        await on_update(12, "Replacing initrd.img in ISO...")
+        await on_update(10, "Replacing initrd.img in ISO...")
         boot_initrd_path = self.extracted_iso_dir / "boot" / "initrd.img"
 
        
@@ -274,7 +202,7 @@ class ModifiedProxmoxISO:
         )
         # 13. Repack entire ISO
 
-        await on_update(13, "Repacking modified ISO...") 
+        await on_update(11, "Repacking modified ISO...") 
 
         self.LOGGER.info(
             f"Repacking modified ISO with xorriso...: source {self.extracted_iso_dir} output {out}"
@@ -288,15 +216,13 @@ class ModifiedProxmoxISO:
             self.LOGGER.error("Failed to repack modified ISO")
             return None
 
-        await on_update(14, "Finished...")
+        await on_update(TOTAL_STEPS, "Finished...")
         self.LOGGER.info(f"Repacked modified ISO to {out}")
         return out
     
     def move_iso_to_final_location(self, final_dir: Path | None = None) -> Path:
         """
         Move the ISO into the root isos dir (/.../data/isos). Overwrite if target exists.
-        If self.modified_iso_path doesn't exist, auto-detect the newest ISO under repacked/
-        (fallback to any *.iso under work_dir).
         """
         import os
         from pathlib import Path
