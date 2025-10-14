@@ -1,4 +1,4 @@
-from safe_pc.utils.crypto.crypto import (
+from safe_pc.utm.utils.crypto.crypto import (
     compute_sha256,
     compute_sha512,
     verify_sha256,
@@ -8,12 +8,12 @@ from safe_pc.utils.crypto.crypto import (
 )
 
 
-from safe_pc.utils.crypto.X509 import (
+from safe_pc.utm.utils.crypto.X509 import (
     SAFE_PC_CERT_DEFAULTS,
     generate_self_signed_cert,
 )
-from safe_pc.utils.crypto.temp_key_file import TempKeyFile
-from safe_pc.utils.crypto.entropy import password_entropy, is_high_entropy_password
+from safe_pc.utm.utils.crypto.temp_key_file import TempKeyFile
+from safe_pc.utm.utils.crypto.entropy import password_entropy, is_high_entropy_password
 
 __all__ = [
     "TempKeyFile",

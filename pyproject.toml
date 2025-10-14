@@ -11,7 +11,6 @@ dependencies = [
     "fastapi[standard] (>=0.117.1,<0.118.0)",
     "uvicorn (>=0.37.0,<0.38.0)",
     "pyjwt[crypto] (>=2.10.1,<3.0.0)",
-    "pywin32>=311,<312; sys_platform == 'win32'",
     "tomlkit (>=0.13.3,<0.14.0)",
     "python-dotenv (>=1.1.1,<2.0.0)",
     "requests (>=2.32.5,<3.0.0)",
@@ -20,7 +19,7 @@ dependencies = [
     "aiofiles (>=24.1.0,<25.0.0)",
     "passlib (>=1.7.4,<2.0.0)",
     "websockets (>=15.0.1,<16.0.0)",
-    "zstandard (>=0.25.0,<0.26.0)"
+    "ansible (>=12.1.0,<13.0.0)",
     ]
 
 [tool.poetry]
@@ -31,7 +30,7 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-"gen-cert" = "safe_pc.utils.crypto.X509:main"
+"gen-cert" = "safe_pc.utm.utils.crypto.X509:main"
 "dl-iso" = "safe_pc.proxmox_auto_installer.iso.iso:main"
 dev = "safe_pc.proxmox_auto_installer.scripts.run_dev:main"
 start = "safe_pc.proxmox_auto_installer.back_end.server:main"

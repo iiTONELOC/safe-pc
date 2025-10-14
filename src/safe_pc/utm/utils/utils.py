@@ -19,8 +19,9 @@ def get_local_ip() -> str:
     return local_ip
 
 
-
-def handle_keyboard_interrupt(func:collections.abc.Callable[..., Any]) -> collections.abc.Callable[..., Any]:
+def handle_keyboard_interrupt(
+    func: collections.abc.Callable[..., Any],
+) -> collections.abc.Callable[..., Any]:
     """Decorator to handle KeyboardInterrupt exceptions gracefully.
 
     Args:
@@ -48,7 +49,7 @@ def handle_keyboard_interrupt(func:collections.abc.Callable[..., Any]) -> collec
     return wrapper
 
 
-def IS_TESTING() -> bool:
+def is_testing() -> bool:
     """Check if the code is running in a testing environment.
 
     Returns:
@@ -57,7 +58,7 @@ def IS_TESTING() -> bool:
     return getenv("CAPSTONE_TESTING", "0") == "1"
 
 
-def IS_VERBOSE() -> bool:
+def is_verbose() -> bool:
     """Check if verbose mode is enabled via command-line arguments.
 
     Returns:
@@ -81,16 +82,15 @@ def calculate_percentage(part: int, whole: int) -> int:
     return ((part / whole) * 100).__round__(0).__int__()
 
 
-
 @dataclass
 class CmdResult:
     stdout: str
     stderr: str
-    returncode: int|None
+    returncode: int | None
 
 
 class CommandError(RuntimeError):
-    def __init__(self, args: Sequence[str], rc: int|None, stdout: str, stderr: str):
+    def __init__(self, args: Sequence[str], rc: int | None, stdout: str, stderr: str):
         super().__init__(f"Command failed ({rc}): {' '.join(map(str, args))}")
         self.args_list = list(args)
         self.returncode = rc

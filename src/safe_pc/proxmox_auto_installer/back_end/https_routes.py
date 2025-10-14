@@ -3,7 +3,7 @@ from datetime import datetime
 from logging import getLogger
 from json import loads as json_loads, dumps as json_dumps
 
-from safe_pc.utils.utils import get_local_ip
+from safe_pc.utm.utils.utils import get_local_ip
 from safe_pc.proxmox_auto_installer.back_end.helpers import DevHelpers
 from safe_pc.proxmox_auto_installer.utils.tzd import ProxmoxTimezoneHelper
 from safe_pc.proxmox_auto_installer.constants import PROXMOX_ALLOWED_KEYBOARDS
@@ -24,6 +24,7 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 
 LOGGER = getLogger(__name__)
 
+
 async def check_max_jobs():
     if not await below_max_jobs():
         return JSONResponse(
@@ -31,6 +32,7 @@ async def check_max_jobs():
             status_code=429,
         )
     return None
+
 
 class HttpsRoutes:
     START_YEAR = 2025  # Project start year for copyright
@@ -69,14 +71,14 @@ class HttpsRoutes:
 
         # Middleware to add Content-Security-Policy headers, ensures this is attached first
         @app.middleware(middleware_type="http")
-        async def csp_middleware(request: Request, call_next: Any) -> HTMLResponse: # type: ignore
-            response:HTMLResponse = await call_next(request)
+        async def csp_middleware(request: Request, call_next: Any) -> HTMLResponse:  # type: ignore
+            response: HTMLResponse = await call_next(request)
             response.headers["Content-Security-Policy"] = HttpsRoutes.CSP_POLICY
             return response
 
         # Root endpoint serving the main page
         @app.get(path="/", response_class=HTMLResponse)
-        async def read_root(request: Request): # type: ignore
+        async def read_root(request: Request):  # type: ignore
             # generate a new jwt for the session if needed
 
             response = templates.TemplateResponse(
@@ -89,9 +91,9 @@ class HttpsRoutes:
             )
 
             return response
-        
+
         @app.get(path="/iso-download/{job_id}", response_class=HTMLResponse)
-        async def iso_download_page(request: Request, job_id: str): # type: ignore
+        async def iso_download_page(request: Request, job_id: str):  # type: ignore
             # generate a new jwt for the session if needed
 
             response = templates.TemplateResponse(
@@ -107,13 +109,11 @@ class HttpsRoutes:
             return response
 
         # Development mode features - hot-reloading, etc.
-        
-        DevHelpers.handle_dev_hot_reload(app=app, templates=templates)# type: ignore
-            
-        
-          # return a 200 hello work json response for testing
+
+        DevHelpers.handle_dev_hot_reload(app=app, templates=templates)  # type: ignore
+
         @app.get(path="/api/installer/data", response_class=JSONResponse)
-        def get_installer_data_route() -> dict[str, dict[str, Any]]: # type: ignore
+        def get_installer_data_route() -> dict[str, dict[str, Any]]:  # type: ignore
             """Get the data required for the installer settings page."""
             tz_helper = ProxmoxTimezoneHelper()
             cc_helper = ProxmoxCountryCodeHelper()
@@ -135,8 +135,8 @@ class HttpsRoutes:
                 }
             }
 
-        @app.post(path="/api/installer/iso" ,response_class=JSONResponse)
-        async def installer_iso_route(request: Request):# type: ignore
+        @app.post(path="/api/installer/iso", response_class=JSONResponse)
+        async def installer_iso_route(request: Request):  # type: ignore
             try:
                 # ensure we are below the max job limit
                 resp = await check_max_jobs()
@@ -155,14 +155,16 @@ class HttpsRoutes:
                     f"Received ISO creation request with data: {json_dumps(data, indent=2)}"
                 )
                 answer_file: ProxmoxAnswerFile = create_answer_file_from_dict(data)
-             
+
                 resp = await check_max_jobs()
                 if resp:
                     return resp
 
                 # Create a new job for ISO creation
                 job = Job(info=answer_file.to_toml_str())
-                LOGGER.info(f"Created job with ID: {job.job_id}, starting ISO creation...")
+                LOGGER.info(
+                    f"Created job with ID: {job.job_id}, starting ISO creation..."
+                )
                 # Start the ISO creation job in a new thread
                 await job.start()
 
@@ -176,13 +178,12 @@ class HttpsRoutes:
                     content={"error": f"Internal Server Error: {_}"}, status_code=500
                 )
 
-
         # iso-download route
         @app.get(path="/api/iso-download/{job_id}")
-        async def iso_download_route(request: Request, job_id: str):# type: ignore
+        async def iso_download_route(request: Request, job_id: str):  # type: ignore
             try:
                 cache = await CacheManager.new()
-                iso_path =  cache.get_iso_path(job_id)
+                iso_path = cache.get_iso_path(job_id)
                 if not iso_path:
                     raise FileNotFoundError("ISO not found for the given job ID.")
                 return FileResponse(
@@ -195,10 +196,24 @@ class HttpsRoutes:
                 return JSONResponse(
                     content={"error": f"Internal Server Error: {_}"}, status_code=500
                 )
-        
+
+        @app.get(path="/api/delete-iso/{job_id}")
+        async def delete_iso_route(request: Request, job_id: str):  # type: ignore
+            try:
+                cache = await CacheManager.new()
+                await cache.delete_iso(job_id, remove_file=True)
+                return JSONResponse(
+                    content={"status": "ISO deleted successfully."}, status_code=200
+                )
+            except Exception as _:
+                LOGGER.error(f"Error processing ISO delete request: {_}")
+                return JSONResponse(
+                    content={"error": f"Internal Server Error: {_}"}, status_code=500
+                )
+
         # websocket route for job status updates
-        @app.websocket("/api/ws/iso" )
-        async def installer_iso_ws_route(websocket: WebSocket):# type: ignore
+        @app.websocket("/api/ws/iso")
+        async def installer_iso_ws_route(websocket: WebSocket):  # type: ignore
 
             await websocket.accept()
             data = await websocket.receive_text()
@@ -207,7 +222,7 @@ class HttpsRoutes:
             LOGGER.info(f"WebSocket connection request for job {job_id}")
             job = await get_job(job_id)
             LOGGER.info(f"Found job: {job}")
-            if not job or job._socket is not None: # type: ignore
+            if not job or job._socket is not None:  # type: ignore
                 await websocket.close(code=1008)
                 return
             LOGGER.info(f"Attaching socket to job {job_id}")

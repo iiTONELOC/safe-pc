@@ -6,11 +6,11 @@ from pathlib import Path
 from re import match
 from logging import getLogger
 from hashlib import sha256, sha512
-from safe_pc.utils.utils import IS_VERBOSE
+from safe_pc.utm.utils.utils import is_verbose
 from aiofiles import open as aiofiles_open
 
 CHUNK_SIZE = 8192
-LOGGER = getLogger("capstone.utils.crypto" if __name__ == "__main__" else __name__)
+LOGGER = getLogger( __name__)
 
 
 async def compute_sha256(for_file_path: str) -> str:
@@ -31,7 +31,7 @@ async def compute_sha256(for_file_path: str) -> str:
                 if not chunk:
                     break
                 hash_sha256.update(chunk)
-        if IS_VERBOSE():
+        if is_verbose():
             LOGGER.info(f"SHA-256 for {for_file_path}: {hash_sha256.hexdigest()}")
         return hash_sha256.hexdigest()
     except FileNotFoundError:
@@ -58,7 +58,7 @@ async def verify_sha256(for_file_path: str, expected_hash: str) -> bool:
         computed_hash = await compute_sha256(for_file_path)
         # normalize to lowercase for comparison
         if computed_hash.lower() == expected_hash.lower():
-            if IS_VERBOSE():
+            if is_verbose():
                 LOGGER.info(f"Hash match for {for_file_path}")
             return True
         else:
@@ -103,7 +103,7 @@ async def compute_sha512(for_file_path: str) -> str:
                 if not chunk:
                     break
                 hash_sha512.update(chunk)
-        if IS_VERBOSE():
+        if is_verbose():
             LOGGER.info(f"SHA-512 for {for_file_path}: {hash_sha512.hexdigest()}")
         return hash_sha512.hexdigest()
     except FileNotFoundError:
@@ -130,7 +130,7 @@ async def verify_sha512(for_file_path: str, expected_hash: str) -> bool:
         computed_hash = await compute_sha512(for_file_path)
         # normalize to lowercase for comparison
         if computed_hash.lower() == expected_hash.lower():
-            if IS_VERBOSE():
+            if is_verbose():
                 LOGGER.info(f"Hash match for {for_file_path}")
             return True
         else:

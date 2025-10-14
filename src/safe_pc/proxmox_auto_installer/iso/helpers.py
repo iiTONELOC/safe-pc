@@ -1,5 +1,5 @@
 from pathlib import Path
-from safe_pc.utils import get_local_ip
+from safe_pc.utm.utils import get_local_ip
 
 def ensure_flag_file(path: Path, flag_name: str) -> None:
     flag_file = path / flag_name

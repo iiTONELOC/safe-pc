@@ -4,7 +4,7 @@ from pathlib import Path
 from sys import exit, argv
 
 
-from safe_pc.utils import (
+from safe_pc.utm.utils import (
     TempKeyFile,
     get_local_ip,
     handle_keyboard_interrupt,
@@ -21,19 +21,22 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 
-from safe_pc.utils.logs import setup_logging
+from safe_pc.utm.utils.logs import setup_logging
 
 
 load_dotenv()
 
 _CURRENT_DIR = Path(__file__).resolve().parent
 _MAIN = "safe_pc.proxmox_auto_installer.back_end.server:ProxHttpsServer.create_app"
-_DEV_MAIN = "safe_pc.proxmox_auto_installer.back_end.server:ProxHttpsServer.create_app_dev"
+_DEV_MAIN = (
+    "safe_pc.proxmox_auto_installer.back_end.server:ProxHttpsServer.create_app_dev"
+)
+
 
 class ProxHttpSever:
     IP = get_local_ip()
     PORT = 33007
-    
+
     @staticmethod
     def create_app() -> FastAPI:
         """Create a new FastAPI app.
@@ -42,30 +45,29 @@ class ProxHttpSever:
             FastAPI: The created FastAPI app instance.
         """
         app = FastAPI()
-        
+
         HttpAPIRoutes.register(app=app)
 
-
         return app
-    
+
     @staticmethod
     def run():
-        """Starts the server with the specified configuration.
-        """
+        """Starts the server with the specified configuration."""
         setup_logging()
-       
+
         try:
             config = Config(
                 app=ProxHttpSever.create_app(),
                 port=ProxHttpSever.PORT,
                 host=f"{ProxHttpSever.IP}",
-                log_level="info"
+                log_level="info",
             )
             server = Server(config=config)
             run(server.serve())
         except Exception as e:
             print(f"Error starting server: {e}")
             exit(1)
+
 
 # Proxmox Install Server
 class ProxHttpsServer:
@@ -113,7 +115,7 @@ class ProxHttpsServer:
         ```
         """
         app = FastAPI()
-    
+
         app.add_middleware(
             middleware_class=CORSMiddleware,
             allow_origins=ProxHttpsServer.CORS_ORIGINS,
@@ -156,9 +158,7 @@ class ProxHttpsServer:
         setup_logging()
         cert_dir = Path(__file__).resolve().parents[4] / "certs"
         key_file_path = cert_dir / "safe-pc-key.pem"
-        with TempKeyFile(
-            key_file_path.read_bytes()
-        ) as key_path:
+        with TempKeyFile(key_file_path.read_bytes()) as key_path:
             try:
                 config = Config(
                     app=(_DEV_MAIN if dev else _MAIN),
@@ -176,8 +176,6 @@ class ProxHttpsServer:
                 exit(1)
 
 
-
-
 @handle_keyboard_interrupt
 def main():
     """
@@ -185,10 +183,9 @@ def main():
     """
 
     # Used for Answer File Discovery and Download
-    run(main=ProxHttpSever.run()) #type: ignore
+    run(main=ProxHttpSever.run())  # type: ignore
     # Used for Proxmox Installer Interface and API
     run(main=ProxHttpsServer.run())
-    
 
 
 @handle_keyboard_interrupt
@@ -197,15 +194,17 @@ def main_dev():
     Entry point for running the server in development mode with hot-reloading.
     """
 
-    
-    answer_server_thread = threading.Thread(target=lambda: run(ProxHttpSever.run()), daemon=True) #type: ignore
-    ui_api_server_thread = threading.Thread(target=lambda: run(ProxHttpsServer.run()), daemon=True)
+    answer_server_thread = threading.Thread(target=lambda: run(ProxHttpSever.run()), daemon=True)  # type: ignore
+    ui_api_server_thread = threading.Thread(
+        target=lambda: run(ProxHttpsServer.run()), daemon=True
+    )
 
     answer_server_thread.start()
     ui_api_server_thread.start()
 
     answer_server_thread.join()
     ui_api_server_thread.join()
+
 
 # If running directly as a script, start the server
 if __name__ == "__main__":

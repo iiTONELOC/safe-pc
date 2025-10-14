@@ -1,4 +1,4 @@
-from safe_pc.utils.crypto import (
+from safe_pc.utm.utils.crypto import (
     TempKeyFile,
     compute_sha256,
     compute_sha512,
@@ -12,10 +12,10 @@ from safe_pc.utils.crypto import (
     generate_self_signed_cert,
 )
 
-from safe_pc.utils.utils import (
+from safe_pc.utm.utils.utils import (
     CmdResult,
-    IS_VERBOSE,
-    IS_TESTING,
+    is_verbose,
+    is_testing,
     CommandError,
     get_local_ip,
     run_command_async,
@@ -23,15 +23,17 @@ from safe_pc.utils.utils import (
     handle_keyboard_interrupt,
 )
 
-from safe_pc.utils.logs import (
+from safe_pc.utm.utils.logs import (
     setup_logging,
 )
+
+
 
 __all__ = [
     "CmdResult",
     "CommandError",
-    "IS_VERBOSE",
-    "IS_TESTING",
+    "is_verbose",
+    "is_testing",
     "get_local_ip",
     "TempKeyFile",
     "verify_sha256",

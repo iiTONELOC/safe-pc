@@ -1,7 +1,5 @@
 node_modules/
 __pycache__/
-
-__pycache__/
 *.py[codz]
 *$py.class
 
@@ -28,6 +26,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Local environment
 .DS_Store
 log[s]/
 data/
@@ -36,3 +35,7 @@ data/
 certs
 .pytest*
 tools/
+
+# Ansible
+ansible/vaults/
+secrets.yml

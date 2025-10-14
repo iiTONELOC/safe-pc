@@ -10,7 +10,7 @@ from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from logging import INFO, Logger, Formatter, StreamHandler, DEBUG, getLogger
 
-from safe_pc.utils.utils import IS_TESTING, IS_VERBOSE
+from safe_pc.utm.utils.utils import is_testing, is_verbose
 
 
 BACKUP_LOG_COUNT = 5  # in days
@@ -19,7 +19,7 @@ _configured = False  # module-level flag to ensure logging is only configured on
 
 def _project_log_dir() -> Path:
     """Get the project's log directory, creating it if necessary."""
-    log_dir = Path(__file__).resolve().parents[3] / "logs"
+    log_dir = Path(__file__).resolve().parents[4] / "logs"
     if not log_dir.exists():
         log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
@@ -27,7 +27,7 @@ def _project_log_dir() -> Path:
 
 def _project_log_file():
     """Get the project's log file path."""
-    log_file = "safe_pc_tests" if IS_TESTING() else "safe_pc"
+    log_file = "safe_pc_tests" if is_testing() else "safe_pc"
     log_dir = _project_log_dir()
     log_path = log_dir / f"{log_file}.log"
     return log_path
@@ -50,16 +50,15 @@ def setup_logging(level: int = INFO, log_file: str = "safe_pc") -> Logger:
         return getLogger(log_file)
 
     # determine if we need DEBUG level logging
-    if level != DEBUG and IS_TESTING() or IS_VERBOSE():
+    if level != DEBUG and is_testing() or is_verbose():
         level = DEBUG
 
     log_path = _project_log_file()
     fmt = Formatter("%(asctime)s - [%(name)s] - %(levelname)s - %(message)s")
 
-    # File handler with rotation (10 MB per file, keep 5 backups)
     file_handler = RotatingFileHandler(
         log_path,
-        mode="a" if not IS_TESTING() else "w",
+        mode="a" if not is_testing() else "w",
         backupCount=BACKUP_LOG_COUNT,
     )
     file_handler.setFormatter(fmt)
@@ -76,7 +75,7 @@ def setup_logging(level: int = INFO, log_file: str = "safe_pc") -> Logger:
     root.addHandler(file_handler)
     root.addHandler(stream_handler)
 
-    root.info(f" Logging initialized. Log file: ./{Path(log_path)} ".center(80, "*"))
+    root.info(f" Logging initialized. Log file: {Path(log_path)} ".center(80, "*"))
 
     _configured = True
     return getLogger(log_file)

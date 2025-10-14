@@ -8,9 +8,6 @@ from types import FrameType
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 
-if os.name == "nt":
-    from safe_pc.utils.crypto.X509 import _harden_windows_file
-
 
 class TempKeyFile:
     """
@@ -24,8 +21,8 @@ class TempKeyFile:
     def __init__(
         self,
         key_input: bytes | bytearray | EllipticCurvePrivateKey,
-        prefix:str="safe-pc-key-",
-        suffix:str=".pem"
+        prefix: str = "safe-pc-key-",
+        suffix: str = ".pem",
     ):
         """
         key_input may be:
@@ -62,15 +59,11 @@ class TempKeyFile:
             os.close(fd)
 
         p = Path(path_str)
-        if os.name == "nt":
-            # Try to set ACL right away. If this raises, we still remove file in cleanup.
-            _harden_windows_file(p)
-        else:
-            # On Unix-like systems, set file mode to 0o600 (owner read/write).
-            try:
-                p.chmod(0o600)
-            except Exception:
-                pass
+
+        try:
+            p.chmod(0o600)
+        except Exception:
+            pass
 
         return p
 
@@ -90,9 +83,7 @@ class TempKeyFile:
 
         return self._path
 
-
-
-    def _signal_handler(self, signum: int, frame: FrameType|None) -> None:
+    def _signal_handler(self, signum: int, frame: FrameType | None) -> None:
         self._cleanup()
         # re-raise default behavior after cleanup
         raise SystemExit(0)
@@ -115,5 +106,10 @@ class TempKeyFile:
                 pass
         self._path = None
 
-    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: object | None) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: object | None,
+    ) -> None:
         self._cleanup()

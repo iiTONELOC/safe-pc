@@ -8,7 +8,7 @@ from fastapi import WebSocket
 
 from safe_pc.proxmox_auto_installer.answer_file.cached_answers import CacheManager
 from safe_pc.proxmox_auto_installer.iso.iso import ModifiedProxmoxISO, ProxmoxISO
-from safe_pc.utils.utils import calculate_percentage
+from safe_pc.utm.utils.utils import calculate_percentage
 
 MAX_JOBS = 5  # Maximum number of concurrent jobs
 LOGGER = getLogger(

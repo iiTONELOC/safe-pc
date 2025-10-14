@@ -1,7 +1,7 @@
 from os import environ
 import pytest
 
-from safe_pc.utils.logs import setup_logging
+from safe_pc.utm.utils.logs import setup_logging
 
 
 @pytest.fixture(scope="session", autouse=True)

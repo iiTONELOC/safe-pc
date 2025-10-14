@@ -6,7 +6,7 @@ import os
 from sys import  exit
 from pathlib import Path
 from subprocess import run, CalledProcessError
-from safe_pc.utils.utils import handle_keyboard_interrupt
+from safe_pc.utm.utils.utils import handle_keyboard_interrupt
 
 
 @handle_keyboard_interrupt
