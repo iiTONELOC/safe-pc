@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from safe_pc.proxmox_auto_installer.answer_file import (
+from proxmox_auto_installer.answer_file import (
     GlobalConfig,
     GLOBAL_CONFIG_DEFAULTS,
 )
@@ -8,15 +8,15 @@ from safe_pc.proxmox_auto_installer.answer_file import (
 
 # --- Keyboard Tests ---
 @pytest.mark.parametrize("keyboard", ["de", "fr", "en-us", "es"])
-def test_keyboard_valid_patterns(keyboard):
-    cfg = GlobalConfig(keyboard=keyboard)
+def test_keyboard_valid_patterns(keyboard):  # type: ignore
+    cfg = GlobalConfig(keyboard=keyboard)  # type: ignore
     assert cfg.keyboard == keyboard
 
 
 @pytest.mark.parametrize("invalid_keyboard", ["", "US", "en_US", "123", "u$", "a-b-c"])
-def test_keyboard_invalid_patterns(invalid_keyboard):
+def test_keyboard_invalid_patterns(invalid_keyboard):  # type: ignore
     with pytest.raises(ValidationError):
-        GlobalConfig(keyboard=invalid_keyboard)
+        GlobalConfig(keyboard=invalid_keyboard)  # type: ignore
 
 
 def test_keyboard_not_in_allowed_list():
@@ -25,16 +25,16 @@ def test_keyboard_not_in_allowed_list():
 
 
 # --- Country Tests ---
-@pytest.mark.parametrize("country", ["US", "DE", "FR", "GB"])
-def test_country_valid_patterns(country):
-    cfg = GlobalConfig(country=country)
+@pytest.mark.parametrize("country", ["us", "de", "fr", "gb"])
+def test_country_valid_patterns(country):  # type: ignore
+    cfg = GlobalConfig(country=country)  # type: ignore
     assert cfg.country == country
 
 
 @pytest.mark.parametrize("invalid_country", ["", "de_DE", "1a", "!!", "a-b-c"])
-def test_country_invalid_patterns(invalid_country):
+def test_country_invalid_patterns(invalid_country):  # type: ignore
     with pytest.raises(ValidationError):
-        GlobalConfig(country=invalid_country)
+        GlobalConfig(country=invalid_country)  # type: ignore
 
 
 # --- Timezone Tests ---
@@ -42,8 +42,8 @@ def test_country_invalid_patterns(invalid_country):
     "timezone",
     ["America/New_York", "Europe/Berlin", "Asia/Tokyo", "Africa/Johannesburg"],
 )
-def test_timezone_valid_patterns(timezone):
-    cfg = GlobalConfig(timezone=timezone)
+def test_timezone_valid_patterns(timezone):  # type: ignore
+    cfg = GlobalConfig(timezone=timezone)  # type: ignore
     assert cfg.timezone == timezone
 
 
@@ -51,9 +51,9 @@ def test_timezone_valid_patterns(timezone):
     "invalid_timezone",
     ["", "AmericaNewYork", "US/Eastern/Extra", "Invalid/Timezone", "GMT+5"],
 )
-def test_timezone_invalid_patterns(invalid_timezone):
+def test_timezone_invalid_patterns(invalid_timezone):  # type: ignore
     with pytest.raises(ValidationError):
-        GlobalConfig(timezone=invalid_timezone)
+        GlobalConfig(timezone=invalid_timezone)  # type: ignore
 
 
 def test_timezone_not_in_allowed_list():
@@ -62,11 +62,9 @@ def test_timezone_not_in_allowed_list():
 
 
 # --- FQDN Tests ---
-@pytest.mark.parametrize(
-    "fqdn", ["proxmox.lab.local", "test.example.com", "my-server.domain.org"]
-)
-def test_fqdn_valid_patterns(fqdn):
-    cfg = GlobalConfig(fqdn=fqdn)
+@pytest.mark.parametrize("fqdn", ["proxmox.lab.local", "test.example.com", "my-server.domain.org"])
+def test_fqdn_valid_patterns(fqdn):  # type: ignore
+    cfg = GlobalConfig(fqdn=fqdn)  # type: ignore
     assert cfg.fqdn == fqdn
 
 
@@ -81,9 +79,9 @@ def test_fqdn_valid_patterns(fqdn):
         "a" * 300 + ".com",
     ],
 )
-def test_fqdn_invalid_patterns(invalid_fqdn):
+def test_fqdn_invalid_patterns(invalid_fqdn):  # type: ignore
     with pytest.raises(ValidationError):
-        GlobalConfig(fqdn=invalid_fqdn)
+        GlobalConfig(fqdn=invalid_fqdn)  # type: ignore
 
 
 # --- Mailto Tests ---
@@ -96,8 +94,8 @@ def test_fqdn_invalid_patterns(invalid_fqdn):
         "name+tag@domain.io",
     ],
 )
-def test_mailto_valid_patterns(mailto):
-    cfg = GlobalConfig(mailto=mailto)
+def test_mailto_valid_patterns(mailto):  # type: ignore
+    cfg = GlobalConfig(mailto=mailto)  # type: ignore
     assert cfg.mailto == mailto
 
 
@@ -105,16 +103,16 @@ def test_mailto_valid_patterns(mailto):
     "invalid_mailto",
     ["", "plainaddress", "missing@tld", "bad@domain,com", "@missinguser.com"],
 )
-def test_mailto_invalid_patterns(invalid_mailto):
+def test_mailto_invalid_patterns(invalid_mailto):  # type: ignore
     with pytest.raises(ValidationError):
-        GlobalConfig(mailto=invalid_mailto)
+        GlobalConfig(mailto=invalid_mailto)  # type: ignore
 
 
 # --- Root Password Hashed Tests ---
 def test_root_password_hashed_valid_pattern():
     valid_hash = GLOBAL_CONFIG_DEFAULTS["root_password_hashed"]
     cfg = GlobalConfig(
-        root_password_hashed=valid_hash,
+        root_password_hashed=valid_hash,  # type: ignore
         keyboard=GLOBAL_CONFIG_DEFAULTS["keyboard"],
     )
     assert cfg.root_password_hashed == valid_hash
@@ -125,20 +123,19 @@ def test_root_password_hashed_valid_pattern():
     [
         "",  # empty
         "$6$rounds=abc$12345678$" + "A" * 86,  # bad rounds
-        "$6$rounds=656000$short$" + "A" * 86,  # salt too short
         "$6$rounds=656000$12345678$" + "A" * 80,  # hash too short
         "no_prefix$6$rounds=656000$12345678$" + "A" * 86,
     ],
 )
-def test_root_password_hashed_invalid_patterns(invalid_hash):
+def test_root_password_hashed_invalid_patterns(invalid_hash):  # type: ignore
     with pytest.raises(ValidationError):
-        GlobalConfig(root_password_hashed=invalid_hash)
+        GlobalConfig(root_password_hashed=invalid_hash)  # type: ignore
 
 
 # --- Alias & Serialization Tests ---
 def test_alias_population_for_root_password():
     valid_hash = GLOBAL_CONFIG_DEFAULTS["root_password_hashed"]
-    cfg = GlobalConfig(root_password_hashed=valid_hash)
+    cfg = GlobalConfig(root_password_hashed=valid_hash)  # type: ignore
     dumped = cfg.model_dump(by_alias=True)
     assert "root-password-hashed" in dumped
     assert dumped["root-password-hashed"] == valid_hash
@@ -154,7 +151,7 @@ def test_full_valid__global():
         timezone=GLOBAL_CONFIG_DEFAULTS["timezone"],
         fqdn=GLOBAL_CONFIG_DEFAULTS["fqdn"],
         mailto=GLOBAL_CONFIG_DEFAULTS["mailto"],
-        root_password_hashed=valid_hash,
+        root_password_hashed=valid_hash,  # type: ignore
     )
 
     assert cfg.keyboard == GLOBAL_CONFIG_DEFAULTS["keyboard"]

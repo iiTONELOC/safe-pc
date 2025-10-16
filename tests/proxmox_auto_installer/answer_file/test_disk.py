@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from safe_pc.proxmox_auto_installer.answer_file import (
+from proxmox_auto_installer.answer_file import (
     DiskConfig,
     DISK_CONFIG_DEFAULTS,
 )
@@ -53,9 +53,7 @@ def test_zfs_raid_required_when_zfs():
 def test_zfs_raid_disk_count_enforcement():
     # raidz-1 requires 3 disks
     with pytest.raises(ValidationError):
-        DiskConfig(
-            filesystem="zfs", zfs_raid="raidz-1", disk_list=["/dev/sda", "/dev/sdb"]
-        )
+        DiskConfig(filesystem="zfs", zfs_raid="raidz-1", disk_list=["/dev/sda", "/dev/sdb"])
     # raidz-2 requires 4 disks
     with pytest.raises(ValidationError):
         DiskConfig(filesystem="zfs", zfs_raid="raidz-2", disk_list=["/dev/sda"] * 3)
@@ -112,18 +110,14 @@ def test_disk_list_non_string_items(non_str_item):
 
 # --- Alias & Name Population Tests ---
 def test_alias_population_for_zfs_raid():
-    cfg = DiskConfig(
-        filesystem="zfs", zfs_raid="raid1", disk_list=["/dev/sda", "/dev/sdb"]
-    )
+    cfg = DiskConfig(filesystem="zfs", zfs_raid="raid1", disk_list=["/dev/sda", "/dev/sdb"])
     dumped = cfg.model_dump(by_alias=True)
     assert "zfs.raid" in dumped
     assert dumped["zfs.raid"] == "raid1"
 
 
 def test_alias_population_for_btrfs_raid():
-    cfg = DiskConfig(
-        filesystem="btrfs", btrfs_raid="raid1", disk_list=["/dev/sda", "/dev/sdb"]
-    )
+    cfg = DiskConfig(filesystem="btrfs", btrfs_raid="raid1", disk_list=["/dev/sda", "/dev/sdb"])
     dumped = cfg.model_dump(by_alias=True)
     assert "btrfs.raid" in dumped
     assert dumped["btrfs.raid"] == "raid1"

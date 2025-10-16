@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from safe_pc.proxmox_auto_installer.answer_file import (
+from proxmox_auto_installer.answer_file import (
     NetworkConfig,
     NETWORK_CONFIG_DEFAULTS,
 )
@@ -22,17 +22,17 @@ def test_network_config_valid():
         cidr="192.168.1.100/24",
         gateway="192.168.1.1",
         dns="192.168.1.1,1.1.1.1",
-        mac_filter="*AA:BB:CC:DD:EE:FF",
+        mac_filter="*AABBCCDDEEFF",  # type: ignore
     )
     assert cfg.source == "from-answer"
     assert cfg.cidr == "192.168.1.100/24"
     assert cfg.gateway == "192.168.1.1"
     assert cfg.dns == "192.168.1.1,1.1.1.1"
-    assert cfg.mac_filter == "*AA:BB:CC:DD:EE:FF"
+    assert cfg.mac_filter == "*AABBCCDDEEFF"
 
 
 def test_network_config_alias_serialization():
-    cfg = NetworkConfig(mac_filter=NETWORK_CONFIG_DEFAULTS["mac_filter"])
+    cfg = NetworkConfig(mac_filter=NETWORK_CONFIG_DEFAULTS["mac_filter"])  # type: ignore
     dumped = cfg.model_dump(by_alias=True)
     assert "filter.ID_NET_NAME_MAC" in dumped
     assert dumped["filter.ID_NET_NAME_MAC"] == NETWORK_CONFIG_DEFAULTS["mac_filter"]
@@ -47,9 +47,9 @@ def test_network_config_alias_serialization():
 
 # --- Invalid Inputs ---
 @pytest.mark.parametrize("invalid_source", ["invalid", "", None])
-def test_network_config_invalid_source(invalid_source):
+def test_network_config_invalid_source(invalid_source):  # type: ignore
     with pytest.raises(ValidationError):
-        NetworkConfig(source=invalid_source)
+        NetworkConfig(source=invalid_source)  # type: ignore
 
 
 @pytest.mark.parametrize(
@@ -65,9 +65,9 @@ def test_network_config_invalid_source(invalid_source):
         "",
     ],
 )
-def test_network_config_invalid_cidr(invalid_cidr):
+def test_network_config_invalid_cidr(invalid_cidr):  # type: ignore
     with pytest.raises(ValidationError):
-        NetworkConfig(cidr=invalid_cidr)
+        NetworkConfig(cidr=invalid_cidr)  # type: ignore
 
 
 @pytest.mark.parametrize(
@@ -79,9 +79,9 @@ def test_network_config_invalid_cidr(invalid_cidr):
         "",
     ],
 )
-def test_network_config_invalid_gateway(invalid_gateway):
+def test_network_config_invalid_gateway(invalid_gateway):  # type: ignore
     with pytest.raises(ValidationError):
-        NetworkConfig(gateway=invalid_gateway)
+        NetworkConfig(gateway=invalid_gateway)  # type: ignore
 
 
 @pytest.mark.parametrize(
@@ -94,9 +94,9 @@ def test_network_config_invalid_gateway(invalid_gateway):
         "",
     ],
 )
-def test_network_config_invalid_dns(invalid_dns):
+def test_network_config_invalid_dns(invalid_dns):  # type: ignore
     with pytest.raises(ValidationError):
-        NetworkConfig(dns=invalid_dns)
+        NetworkConfig(dns=invalid_dns)  # type: ignore
 
 
 @pytest.mark.parametrize(
@@ -109,9 +109,9 @@ def test_network_config_invalid_dns(invalid_dns):
         "",
     ],
 )
-def test_network_config_invalid_mac(invalid_mac):
+def test_network_config_invalid_mac(invalid_mac):  # type: ignore
     with pytest.raises(ValidationError):
-        NetworkConfig(mac_filter=invalid_mac)
+        NetworkConfig(mac_filter=invalid_mac)  # type: ignore
 
 
 def test_gateway_set_to_net_address_raises():
@@ -121,8 +121,8 @@ def test_gateway_set_to_net_address_raises():
 
 # --- Conditionals and norms ---
 def test_mac_without_star_is_normalized():
-    cfg = NetworkConfig(mac_filter="00:11:22:33:44:55")
-    assert cfg.mac_filter == "*00:11:22:33:44:55"
+    cfg = NetworkConfig(mac_filter="001122334455")  # type: ignore
+    assert cfg.mac_filter == "*001122334455"
 
 
 def test_from_dhcp_sets_fields_none():

@@ -1,7 +1,7 @@
 import re
 import pytest
 from pydantic import ValidationError
-from safe_pc.proxmox_auto_installer.answer_file import (
+from proxmox_auto_installer.answer_file import (
     DiskConfig,
     GlobalConfig,
     NetworkConfig,
@@ -41,9 +41,7 @@ def valid_disk_config():
 
 
 # --- Core Tests ---
-def test_full_valid_answer_file(
-    valid_global_config, valid_network_config, valid_disk_config
-):
+def test_full_valid_answer_file(valid_global_config, valid_network_config, valid_disk_config):
     answer_file = ProxmoxAnswerFile(
         global_config=valid_global_config,
         network=valid_network_config,
@@ -59,9 +57,7 @@ def test_full_valid_answer_file(
     assert not re.search(r'^".*"\s*=', toml_str, flags=re.MULTILINE)
 
 
-def test_to_json_and_pretty_json(
-    valid_global_config, valid_network_config, valid_disk_config
-):
+def test_to_json_and_pretty_json(valid_global_config, valid_network_config, valid_disk_config):
     answer_file = ProxmoxAnswerFile(
         global_config=valid_global_config,
         network=valid_network_config,

@@ -20,21 +20,25 @@ dependencies = [
     "passlib (>=1.7.4,<2.0.0)",
     "websockets (>=15.0.1,<16.0.0)",
     "ansible (>=12.1.0,<13.0.0)",
+    "platformdirs (>=4.5.0,<5.0.0)",
     ]
 
+[tool.poetry.dependencies]
+utm = { path = "src/utm", develop = true }
+
 [tool.poetry]
-packages = [{include = "safe_pc", from = "src"}]
+packages = [{include = "proxmox_auto_installer", from = "src"}]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-"gen-cert" = "safe_pc.utm.utils.crypto.X509:main"
-"dl-iso" = "safe_pc.proxmox_auto_installer.iso.iso:main"
-dev = "safe_pc.proxmox_auto_installer.scripts.run_dev:main"
-start = "safe_pc.proxmox_auto_installer.back_end.server:main"
-extract-iso = "safe_pc.proxmox_auto_installer.iso.tools:main"
+"gen-cert" = "utm.utils.crypto.X509:main"
+"dl-iso" = "proxmox_auto_installer.iso.iso:main"
+dev = "proxmox_auto_installer.scripts.run_dev:main"
+start = "proxmox_auto_installer.back_end.server:main"
+extract-iso = "proxmox_auto_installer.iso.tools:main"
 
 [dependency-groups]
 dev = [
