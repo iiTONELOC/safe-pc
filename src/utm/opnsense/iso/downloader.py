@@ -3,15 +3,12 @@ from base64 import b64decode
 from logging import getLogger
 from collections.abc import Callable, Awaitable
 
-
 from utm.utils import ISODownloader, fetch_text_from_url, remove_bz2_compression, run_command_async
 
 LOGGER = getLogger(__name__)
 
-"""
-    https://docs.opnsense.org/manual/install.html#download-and-verification
 
-"""
+# https://docs.opnsense.org/manual/install.html#download-and-verification
 
 
 class OpnSenseDownloadError(Exception):
@@ -65,26 +62,23 @@ class OpnSenseISODownloader(ISODownloader):
         if not downloaded.verified or not self.dest_path:
             raise OpnSenseDownloadError("Failed to download OPNSense ISO")
 
-        # track downloaded files
-        self.downloaded_files.append(self.dest_path)
-
         # Handle verification of the DL. If we make it this far the public key and sha matches our expected
         # HOWEVER, signatures have not been verified yet
 
         # get the signature file from the same location as the downloaded ISO
+        LOGGER.info(f"Downloading OPNSense ISO signature file from: {self.downloaded_from.replace('.iso.bz2', '.iso.sig')}")
         signature_file_text = await fetch_text_from_url(self.downloaded_from.replace(".iso.bz2", ".iso.sig"))
         if not signature_file_text:
             raise OpnSenseDownloadError("Failed to download OPNSense ISO signature file")
 
         # decompress the iso before verifying the signature - OPNSense uses bz2 compression
         # And calculates the sha256 of the decompressed file
+        LOGGER.info(f"Decompressing OPNSense ISO file: {self.dest_path}")
         decompressed_path = await remove_bz2_compression(self.dest_path)
-        self.dest_path = decompressed_path  # update to the decompressed path
 
         if not decompressed_path or not decompressed_path.exists():
             raise OpnSenseDownloadError("Failed to decompress OPNSense ISO file")
 
-        self.downloaded_files.append(decompressed_path)
 
         # decode and write the signature file
         sig_bytes = b64decode(signature_file_text)
@@ -110,28 +104,14 @@ class OpnSenseISODownloader(ISODownloader):
             check=False,
         )
 
-        if cmd_result.rc != 0 or "Verified OK" not in cmd_result.stdout:  # type: ignore
+        if cmd_result.returncode != 0 or "Verified OK" not in cmd_result.stdout:  # type: ignore
             LOGGER.error(f"Signature verification failed: {cmd_result.stderr}")  # type: ignore
-            LOGGER.debug(f"Signature verification output: {cmd_result.stdout}")  # type: ignore
+            LOGGER.error(f"Signature verification output: {cmd_result.stdout}")  # type: ignore
             raise OpnSenseDownloadError("Failed to verify OPNSense ISO signature")
         self.verification_status = True
-        self._finalize()
+        LOGGER.info(f"OPNSense ISO signature verified successfully: {decompressed_path}")
         return self
 
-    def _finalize(self):
-        for f in self.downloaded_files:
-            if f.exists() and f != self.dest_path:
-                try:
-                    f.unlink()
-                except Exception as e:
-                    LOGGER.warning(f"Failed to delete temporary file {f}: {e}")
-
-    def _cleanup(self):
-        # on error
-        return super()._cleanup()
-
-    def __aenter__(self):
-        return super().__aenter__()
 
     async def __aexit__(
         self,
@@ -139,12 +119,6 @@ class OpnSenseISODownloader(ISODownloader):
         exc: BaseException | None,
         tb: object | None,
     ) -> None:
-        for f in self.downloaded_files:
-            if f.exists():
-                try:
-                    f.unlink()
-                except Exception as e:
-                    LOGGER.warning(f"Failed to delete temporary file {f}: {e}")
         await super().__aexit__(exc_type, exc, tb)
 
     def __await__(self, dl_if_exists: bool = False):

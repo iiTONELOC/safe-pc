@@ -10,8 +10,8 @@ from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from logging import INFO, Logger, Formatter, StreamHandler, DEBUG, getLogger
 
-from utm.utils.utils import is_testing, is_verbose
-
+from utm.utils.utils import is_testing, is_verbose, is_production
+from platformdirs import user_log_dir
 
 BACKUP_LOG_COUNT = 5  # in days
 _configured = False  # module-level flag to ensure logging is only configured once
@@ -19,7 +19,7 @@ _configured = False  # module-level flag to ensure logging is only configured on
 
 def _project_log_dir() -> Path:
     """Get the project's log directory, creating it if necessary."""
-    log_dir = Path(__file__).resolve().parents[3] / "logs"
+    log_dir = Path(__file__).resolve().parents[3] / "logs" if not is_production() else Path(user_log_dir("safe_pc"))
     if not log_dir.exists():
         log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir

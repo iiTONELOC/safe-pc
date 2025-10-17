@@ -154,6 +154,10 @@ def need_to_download(iso_path: Path, expected_sha256: str) -> bool:
         bool: True if the ISO needs to be downloaded, False otherwise.
     """
     if not iso_path.exists():
+        # if the file ends in a .bz2, check for the decompressed version too
+        if iso_path.suffix == ".bz2" and iso_path.with_suffix("").exists():
+            LOGGER.info(f"Decompressed ISO already exists at {iso_path.with_suffix('')}, no need to download.")
+            return False
         LOGGER.info(f"ISO does not exist at {iso_path}, need to download.")
         return True
 

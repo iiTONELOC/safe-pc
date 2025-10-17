@@ -34,6 +34,7 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
+"build-utm" = "scripts.build:main"
 "gen-cert" = "utm.utils.crypto.X509:main"
 "dl-iso" = "proxmox_auto_installer.iso.iso:main"
 dev = "proxmox_auto_installer.scripts.run_dev:main"

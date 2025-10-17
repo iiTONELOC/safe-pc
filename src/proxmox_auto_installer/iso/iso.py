@@ -3,6 +3,7 @@ from typing import Any
 from pathlib import Path
 from logging import getLogger
 from collections.abc import Callable
+from utm.utils.utils import run_command_async
 from proxmox_auto_installer.iso.helpers import (
     create_answer_file,
     create_auto_installer_mode_file,
@@ -27,7 +28,7 @@ from utm.utils import (
 )
 
 
-TOTAL_STEPS = 12
+TOTAL_STEPS = 17
 
 
 class ProxmoxISO:
@@ -179,11 +180,117 @@ class ModifiedProxmoxISO:
             dest_file=boot_initrd_path,
         )
         out = self.repacked_iso_dir / f"auto-installer-{self.job_id}.iso"
-        self.LOGGER.info(f"Replaced initrd.img in ISO successfully, repacking ISO to {out}")
+        # self.LOGGER.info(f"Replaced initrd.img in ISO successfully, repacking ISO to {out}")
+
+        # unsquash the rootfs
+        # make an extracted squashfs dir
+        extracted_squashfs_dir = self.work_dir / "extracted_squashfs"
+        extracted_squashfs_dir.mkdir(parents=True, exist_ok=True)
+        # 11. Unsquash the rootfs
+        await on_update(11, "Unsquashing rootfs...")
+        status = await run_command_async(
+            "unsquashfs",
+            "-no-xattrs",
+            "-no-progress",
+            "-ignore-errors",
+            "-q",
+            "-d",
+            str(extracted_squashfs_dir),
+            str(self.extracted_iso_dir / "pve-base.squashfs"),
+            check=False,
+        )
+        if status.returncode not in [0, 2]:
+            self.LOGGER.error(f"Failed to unsquash rootfs: {status.stderr}")  # type: ignore
+            return None
+        self.LOGGER.info(f"Unsquashed rootfs to {extracted_squashfs_dir}")
+
+        # ensure the UTM is built
+        await run_command_async("poetry", "run", "build-utm", check=True, cwd=Path(__file__).resolve().parents[3])
+        await on_update(12, "Copying UTM to rootfs...")
+
+        # copy the dist/safe_pc folder into the extracted squashfs
+        dist_safe_pc_path = Path(__file__).resolve().parents[3] / "dist" / "safe_pc"
+        target_safe_pc_path = extracted_squashfs_dir / "usr" / "local" / "lib" / "safe_pc"
+
+        if target_safe_pc_path.exists():
+            await run_command_async("rm", "-rf", str(target_safe_pc_path), check=True)
+
+        await run_command_async(
+            "cp",
+            "-r",
+            str(dist_safe_pc_path),
+            str(target_safe_pc_path.parent),
+            check=True,
+        )
+        await on_update(13, "Setting executable permissions...")
+        # ensure everything is executable
+        await run_command_async(
+            "chmod",
+            "-R",
+            "+x",
+            str(target_safe_pc_path),
+            check=True,
+        )
+
+        # create a service that will run safe_pc on first boot
+        await on_update(14, "Creating systemd service for first boot...")
+        service_str = """
+[Unit]
+Description=Safe PC Auto Installer Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/lib/safe_pc/src/utm/scripts/post_install.py
+[Install]
+WantedBy=multi-user.target
+        """
+        service_path = extracted_squashfs_dir / "etc" / "systemd" / "system" / "safe_pc_auto_installer.service"
+        service_path.write_text(service_str)
+        self.LOGGER.info(f"Created systemd service at {service_path}")
+
+        # enable the service by linking it to multi-user.target.wants
+        wants_dir = extracted_squashfs_dir / "etc" / "systemd" / "system" / "multi-user.target.wants"
+        wants_dir.mkdir(parents=True, exist_ok=True)
+        link_path = wants_dir / "safe_pc_auto_installer.service"
+        await run_command_async(
+            "ln",
+            "-sf",
+            str(service_path),
+            str(link_path),
+            check=True,
+        )
+
+        await on_update(15, "Repacking rootfs...")
+        tmp_squash = Path("/tmp/pve-base.squashfs")
+
+        status = await run_command_async(
+            "mksquashfs",
+            str(extracted_squashfs_dir),
+            str(tmp_squash),
+            "-noappend",
+            "-comp",
+            "xz",
+            "-Xbcj",
+            "x86",
+            check=False,
+        )
+        if status.returncode != 0:
+            self.LOGGER.error(f"Failed to repack rootfs: {status.stderr}")
+            return None
+
+        await run_command_async(
+            "mv",
+            str(tmp_squash),
+            str(self.extracted_iso_dir / "pve-base.squashfs"),
+            check=True,
+        )
+
         # 13. Repack entire ISO
 
-        await on_update(11, "Repacking modified ISO...")
-
+        await on_update(16, "Repacking modified ISO...")
         self.LOGGER.info(f"Repacking modified ISO with xorriso...: source {self.extracted_iso_dir} output {out}")
         ok = await xorriso_repack_iso(
             unpacked_iso_dir=self.extracted_iso_dir,

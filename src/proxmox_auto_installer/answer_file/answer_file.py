@@ -18,6 +18,13 @@ from pydantic import BaseModel, Field
 from tomlkit import dumps as toml_dumps  # type: ignore[import]
 
 
+class ProxFirstBootConfig(BaseModel):
+    model_config = {"populate_by_name": True}
+
+    source: str = "from-iso"
+    ordering: str = "network-online"
+
+
 class ProxmoxAnswerFile(BaseModel):
     model_config = {"populate_by_name": True}
 
@@ -35,6 +42,11 @@ class ProxmoxAnswerFile(BaseModel):
         description="Disk setup configuration settings",
         alias="disk-setup",
     )
+    # first_boot: ProxFirstBootConfig = Field(
+    #     default_factory=ProxFirstBootConfig,
+    #     description="Proxmox first boot configuration settings",
+    #     alias="first-boot",
+    # )
 
     def to_dict(self) -> dict[str, Any]:
         # ensure none values are removed

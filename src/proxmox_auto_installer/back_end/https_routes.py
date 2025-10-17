@@ -58,15 +58,6 @@ class HttpsRoutes:
             app (FastAPI): The FastAPI application instance to which the routes will be added.
             templates (Jinja2Templates): The Jinja2Templates instance used for rendering templates.
             dev (bool, optional): If True, enables development mode features. Defaults to False.
-
-        Side Effects:
-            - Adds middleware to set Content-Security-Policy headers.
-            - Registers the root endpoint ("/") to serve the main HTML page.
-            - In development mode, sets up hot-reloading functionality.
-
-        Notes:
-            The CSP policy is set to restrict resources to the same origin and allow images from
-            data URIs.
         """
 
         # Middleware to add Content-Security-Policy headers, ensures this is attached first
