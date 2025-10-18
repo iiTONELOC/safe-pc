@@ -3,6 +3,7 @@ from typing import Any
 from pathlib import Path
 from logging import getLogger
 from collections.abc import Callable
+
 from utm.utils.utils import run_command_async
 from proxmox_auto_installer.iso.helpers import (
     create_answer_file,
@@ -29,6 +30,7 @@ from utm.utils import (
 
 
 TOTAL_STEPS = 17
+SAFE_PC_INSTALL_LOCATION = "/opt/safe_pc"
 
 
 class ProxmoxISO:
@@ -59,10 +61,7 @@ class ProxmoxISO:
         """Extracts the ISO filename from the URL."""
         return self.url.split("/")[-1]
 
-    async def download(
-        self,
-        on_update: Callable[[int, int, str], Any] = lambda x, t, y: print(f"{x/t}%, {y}"),
-    ) -> bool:
+    async def download(self, on_update: Callable[[int, int, str], Any] | None = None) -> bool:
         """Downloads the ISO file to the specified directory.
 
         Args:
@@ -75,7 +74,8 @@ class ProxmoxISO:
         if not validate_iso_url(self.url):
             raise ValueError(f"Invalid ISO URL: {self.url}")
 
-        await on_update(0, TOTAL_STEPS, "Starting Download")
+        if on_update:
+            await on_update(0, TOTAL_STEPS, "Starting Download")
         downloaded = await ISODownloader(get_latest_prox_url_w_hash, dest_dir=self.iso_dir, on_update=on_update)
         return downloaded.verified
 
@@ -210,10 +210,13 @@ class ModifiedProxmoxISO:
 
         # copy the dist/safe_pc folder into the extracted squashfs
         dist_safe_pc_path = Path(__file__).resolve().parents[3] / "dist" / "safe_pc"
-        target_safe_pc_path = extracted_squashfs_dir / "usr" / "local" / "lib" / "safe_pc"
+        target_safe_pc_path = extracted_squashfs_dir / "opt" / "safe_pc"
 
         if target_safe_pc_path.exists():
             await run_command_async("rm", "-rf", str(target_safe_pc_path), check=True)
+
+        # ensure the opt folder exists, if not, create it
+        (extracted_squashfs_dir / "opt").mkdir(parents=True, exist_ok=True)
 
         await run_command_async(
             "cp",
@@ -234,7 +237,7 @@ class ModifiedProxmoxISO:
 
         # create a service that will run safe_pc on first boot
         await on_update(14, "Creating systemd service for first boot...")
-        service_str = """
+        service_str = f"""
 [Unit]
 Description=Safe PC Auto Installer Service
 Wants=network-online.target
@@ -243,7 +246,7 @@ After=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/local/lib/safe_pc/src/utm/scripts/post_install.py
+ExecStart={SAFE_PC_INSTALL_LOCATION}/src/utm/scripts/post_install.py
 [Install]
 WantedBy=multi-user.target
         """

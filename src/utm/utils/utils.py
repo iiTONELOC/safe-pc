@@ -1,17 +1,15 @@
 import bz2
 import asyncio
-import collections.abc
-from os import getenv
 
+from os import getenv
 from typing import Any
 from pathlib import Path
 from logging import getLogger
-
 from httpx import AsyncClient
-
-from dataclasses import dataclass
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable
 from socket import gethostname, gethostbyname
+from utm.scripts.post_install import CmdResult, CommandError, run_command_async  # type: ignore
+
 
 LOGGER = getLogger(__name__)
 
@@ -28,8 +26,8 @@ def get_local_ip() -> str:
 
 
 def handle_keyboard_interrupt(
-    func: collections.abc.Callable[..., Any],
-) -> collections.abc.Callable[..., Any]:
+    func: Callable[..., Any],
+) -> Callable[..., Any]:
     """Decorator to handle KeyboardInterrupt exceptions gracefully.
 
     Args:
@@ -97,50 +95,6 @@ def calculate_percentage(part: int, whole: int) -> int:
     if whole == 0:
         return 0
     return ((part / whole) * 100).__round__(0).__int__()
-
-
-@dataclass
-class CmdResult:
-    stdout: str
-    stderr: str
-    returncode: int | None
-
-
-class CommandError(RuntimeError):
-    def __init__(self, args: Sequence[str], rc: int | None, stdout: str, stderr: str):
-        super().__init__(f"Command failed ({rc}): {' '.join(map(str, args))}")
-        self.args_list = list(args)
-        self.returncode = rc
-        self.stdout = stdout
-        self.stderr = stderr
-
-
-async def run_command_async(
-    *args: str | Path,
-    cwd: str | Path | None = None,
-    env: Mapping[str, str] | None = None,
-    check: bool = True,
-) -> CmdResult:
-    cmd = tuple(str(a) for a in args)
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        cwd=str(cwd) if cwd else None,
-        env=dict(env) if env else None,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    try:
-        stdout_b, stderr_b = await proc.communicate()
-    except (asyncio.CancelledError, asyncio.TimeoutError):
-        proc.kill()
-        await proc.communicate()
-        raise
-    rc = proc.returncode
-    stdout = stdout_b.decode(errors="replace")
-    stderr = stderr_b.decode(errors="replace")
-    if check and rc != 0:
-        raise CommandError(cmd, rc, stdout, stderr)
-    return CmdResult(stdout, stderr, rc)
 
 
 async def fetch_text_from_url(url: str) -> str:

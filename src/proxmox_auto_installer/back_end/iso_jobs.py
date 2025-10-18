@@ -7,7 +7,7 @@ from logging import getLogger
 from fastapi import WebSocket
 
 from proxmox_auto_installer.answer_file.cached_answers import CacheManager
-from proxmox_auto_installer.iso.iso import ModifiedProxmoxISO, ProxmoxISO
+from proxmox_auto_installer.iso.iso import ModifiedProxmoxISO, ProxmoxISO, TOTAL_STEPS
 from utm.utils.utils import calculate_percentage
 
 MAX_JOBS = 5  # Maximum number of concurrent jobs
@@ -109,7 +109,7 @@ class Job:
             return
 
         # modify it
-        await self.update_progress(calculate_percentage(4, 13), "Modifying Proxmox ISO...")
+        await self.update_progress(calculate_percentage(4, TOTAL_STEPS), "Modifying Proxmox ISO...")
         LOGGER.info("Creating ModifiedProxmoxISO instance...")
 
         self._modified_iso = ModifiedProxmoxISO(self._proxmox_iso, str(self.job_id))
@@ -118,7 +118,7 @@ class Job:
                 answer_file=self.info,
                 on_update=lambda p, msg: asyncio.create_task(
                     self.update_progress(
-                        calculate_percentage(p, 14),
+                        calculate_percentage(p, TOTAL_STEPS),
                         msg or f"Modifying Proxmox ISO... {p}%",
                     )
                 ),

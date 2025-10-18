@@ -1,6 +1,5 @@
 import re
 from pathlib import Path
-from httpx import AsyncClient
 from logging import getLogger
 from asyncio import gather as asyncio_gather
 from secrets import choice as random_choice_secure
@@ -14,8 +13,6 @@ from utm.utils import (
     get_current_tz_utc_off_hrs,
 )
 
-
-from bs4 import BeautifulSoup
 
 LOGGER = getLogger(__name__)
 
@@ -86,12 +83,15 @@ async def extract_pub_key_from_mirror(mirror: str = OpnSenseConstants.PUB_KEY_MI
         The mirror only lists the public key, not the SHA256 hashes.
     """
     try:
-        async with AsyncClient() as client:
-            response = await client.get(mirror)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.text, "html.parser")
-            pub_key = extract_public_key_from_text(soup.get_text()) if soup else ""
-            return pub_key
+        # async with AsyncClient() as client:
+        #     response = await client.get(mirror)
+        #     response.raise_for_status()
+        #     soup = BeautifulSoup(response.text, "html.parser")
+        #     pub_key = extract_public_key_from_text(soup.get_text()) if soup else ""
+        #     return pub_key
+        txt = await fetch_text_from_url(mirror)
+        pub_key = extract_public_key_from_text(txt)
+        return pub_key
     except Exception as e:
         LOGGER.error(f"Failed to fetch public key from mirror: {e}")
         return ""
@@ -138,16 +138,14 @@ async def get_educated_authoritative_key_and_hash() -> tuple[str, str]:
         discovered_keys.append(mirror_key)
     else:
         LOGGER.warning("Failed to fetch public key from mirror.")
-        
 
     # 2. Other release URLs concurrently
     release_urls: list[str] = OpnSenseConstants.RELEASES[OpnSenseConstants.CURRENT_VERSION][0]
-    
+
     results: list[tuple[str, str] | BaseException] = await asyncio_gather(
         *[get_pub_key_and_hash(url, OpnSenseConstants.CURRENT_VERSION) for url in release_urls],
         return_exceptions=True,
     )
-    
 
     for res in results:
         if isinstance(res, Exception):
@@ -157,7 +155,6 @@ async def get_educated_authoritative_key_and_hash() -> tuple[str, str]:
             discovered_keys.append(pub_key)  # type: ignore
         if sha256_hash:
             discovered_hashes.append(sha256_hash)  # type: ignore
-            
 
     # 3. Reach consensus
     key: str = reach_consensus(discovered_keys)
@@ -191,7 +188,9 @@ async def get_latest_opns_url_w_hash() -> tuple[str, str, str]:
         sums_url = f"{url}/OPNsense-{OpnSenseConstants.CURRENT_VERSION}-checksums-amd64.sha256"
 
         # grab the public key from the mirror too, just to be sure
-        mirror_listed_key = await extract_pub_key_from_mirror(f"{url}/OPNsense-{OpnSenseConstants.CURRENT_VERSION}.pub")
+        mirror_listed_key = await extract_pub_key_from_mirror(
+            f"{url}/OPNsense-{OpnSenseConstants.CURRENT_VERSION}.pub"
+        )
 
         if not mirror_listed_key or mirror_listed_key != key:
             err_msg = "Public key from mirror does not match authoritative key. Not proceeding."

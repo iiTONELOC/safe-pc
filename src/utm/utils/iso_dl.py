@@ -1,3 +1,5 @@
+import errno
+import traceback
 from typing import Any
 from pathlib import Path
 from httpx import AsyncClient
@@ -34,8 +36,6 @@ def _should_use_progress(*, use_progress: bool = False, progress: object = None)
     return bool(use_progress) and progress is not None
 
 
-from typing import Any
-
 def _init_progress(*, use_progress: bool = False, size: int = 0) -> Any:
     if not use_progress:
         return None
@@ -49,19 +49,22 @@ async def _update_progress(
     progress: Any | None = None,
     downloaded: int = 0,
     size: int = 0,
-    on_update: Callable[[int,int, str], Any]|None = None,
+    on_update: Callable[[int, int, str], Any] | None = None,
 ) -> int:
     downloaded += n
     if _should_use_progress(use_progress=use_progress, progress=progress):
         if progress is not None:
             progress.update(n)
     elif on_update:
-        await on_update(downloaded,size, "Downloading Proxmox VE ISO...")
+        await on_update(downloaded, size, "Downloading Proxmox VE ISO...")
     return downloaded
 
 
 async def _single_downloader_async(
-    url: str, dest_path: Path, size: int, on_update:Callable[[int,int, str], Any]|None = None,
+    url: str,
+    dest_path: Path,
+    size: int,
+    on_update: Callable[[int, int, str], Any] | None = None,
 ):
     downloaded = 0
     use_progress = on_update is None
@@ -105,9 +108,11 @@ async def _single_downloader_async(
             progress.close()
 
 
-
-
-async def handle_download(url: str, dest_path: Path, on_update: Callable[[int,int, str], Any]|None = None,):
+async def handle_download(
+    url: str,
+    dest_path: Path,
+    on_update: Callable[[int, int, str], Any] | None = None,
+):
     """
     Asynchronously downloads a file from the specified URL to the given destination path.
     This function retrieves the file size via a HEAD request for progress tracking, ensures the destination directory exists,
@@ -139,7 +144,6 @@ async def handle_download(url: str, dest_path: Path, on_update: Callable[[int,in
         if dest_path.exists():
             dest_path.unlink()
         raise
-
 
 
 def need_to_download(iso_path: Path, expected_sha256: str) -> bool:
@@ -232,6 +236,7 @@ class ISODownloader:
 
         except Exception as e:
             LOGGER.error(f"ISO download/verification failed: {e}")
+            traceback.print_exc()
             self.verified = False
             self._cleanup()
             return self
@@ -241,7 +246,20 @@ class ISODownloader:
             self.dest_path = self.dest_dir / Path(self.iso_path).name
             LOGGER.info(f"Moving verified ISO to {self.dest_path}")
             self.dest_dir.mkdir(parents=True, exist_ok=True)
-            Path(self.iso_path).replace(self.dest_path)
+
+            try:
+                Path(self.iso_path).replace(self.dest_path)
+            except OSError as e:
+                if e.errno == errno.EXDEV:
+                    # Handle cross-device move
+                    import shutil
+
+                    shutil.copy2(self.iso_path, self.dest_path)
+                    Path(self.iso_path).unlink()
+                else:
+                    LOGGER.error(f"Failed to move ISO to destination: {e}")
+                    raise
+
             (self.dest_path.with_suffix(".sha256")).write_text(self.expected_sha256)
 
         self.temp_dir.cleanup()

@@ -1,4 +1,7 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.13
+import os
+import asyncio
+from sys import argv
 from pathlib import Path
 from logging import getLogger
 from dataclasses import dataclass
@@ -6,7 +9,12 @@ from collections.abc import Mapping, Sequence
 
 logger = getLogger(__name__)
 
-# Repeated from utils
+script_path = Path(argv[0]).resolve()
+
+PROJECT_ROOT = script_path.parent.parent
+POETRY_PATH = "/root/.local/share/pipx/venvs/poetry/bin/poetry"
+
+
 @dataclass
 class CmdResult:
     stdout: str
@@ -51,17 +59,23 @@ async def run_command_async(
     return CmdResult(stdout, stderr, rc)
 
 
-# determine if we are on proxmox or a different os
 async def is_proxmox() -> bool:
     cmd = "pveversion"
     result = await run_command_async(cmd)
     return result.returncode == 0
 
 
-async def remove_enterprise_repo():
-    if not await is_proxmox():
-        logger.info("Not running on Proxmox, skipping repository removal.")
-        return
+def only_on_proxmox(func):  # type: ignore
+    async def wrapper(*args, **kwargs):  # type: ignore
+        if not await is_proxmox():
+            logger.info(f"Not running on Proxmox, skipping {func.__name__}.")  # type: ignore
+            return
+        return await func(*args, **kwargs)  # type: ignore
+
+    return wrapper  # type: ignore
+
+
+def remove_enterprise_repo():
     repo_file = Path("/etc/apt/sources.list.d/pve-enterprise.sources")
     try:
         if repo_file.exists():
@@ -71,12 +85,9 @@ async def remove_enterprise_repo():
             logger.info(f"No enterprise repository file found at: {repo_file}")
     except Exception as e:
         logger.error(f"Failed to remove enterprise repository file: {e}")
-        
-    
-async def remove_ceph_repo():
-    if not await is_proxmox():
-        logger.info("Not running on Proxmox, skipping Ceph repository removal.")
-        return
+
+
+def remove_ceph_repo():
     repo_file = Path("/etc/apt/sources.list.d/ceph.sources")
     try:
         if repo_file.exists():
@@ -86,15 +97,12 @@ async def remove_ceph_repo():
             logger.info(f"No Ceph repository file found at: {repo_file}")
     except Exception as e:
         logger.error(f"Failed to remove Ceph repository file: {e}")
-        
-        
 
-async def set_proxmox_repo_to_community():
-    #File /etc/apt/sources.list.d/proxmox.sources
-    #https://pve.proxmox.com/wiki/Package_Repositories
-    if not await is_proxmox():
-        logger.info("Not running on Proxmox, skipping repository configuration.")
-        return
+
+def set_proxmox_repo_to_community():
+    # File /etc/apt/sources.list.d/proxmox.sources
+    # https://pve.proxmox.com/wiki/Package_Repositories
+
     repo_str = """
 Types: deb
 URIs: http://download.proxmox.com/debian/pve
@@ -103,90 +111,142 @@ Components: pve-no-subscription
 Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
     """
     repo_file = Path("/etc/apt/sources.list.d/proxmox.sources")
-    
+
     try:
         # Backup existing file if it exists
         if repo_file.exists():
-            backup_file = repo_file.with_suffix('.backup')
+            backup_file = repo_file.with_suffix(".backup")
             repo_file.rename(backup_file)
             logger.info(f"Backed up existing repository file to {backup_file}")
 
         # Write the new repository configuration
-        with repo_file.open('w') as f:
-            f.write(repo_str.strip() + '\n')
+        with repo_file.open("w") as f:
+            f.write(repo_str.strip() + "\n")
         logger.info(f"Set Proxmox repository to community edition in {repo_file}")
-        
 
     except Exception as e:
         logger.error(f"Failed to set Proxmox repository: {e}")
-        
+
+
 async def update_and_upgrade_apt():
-    if not await is_proxmox():
-        logger.info("Not running on Proxmox, skipping apt update.")
-        return
 
     env = {"DEBIAN_FRONTEND": "noninteractive"}
     try:
         await run_command_async("apt", "update", "-y", env=env)
         await run_command_async(
-            "apt", "full-upgrade", "-y",
-            "-o", "Dpkg::Options::=--force-confnew",
-            "-o", "Dpkg::Options::=--force-confdef",
-            env=env
+            "apt",
+            "full-upgrade",
+            "-y",
+            "-o",
+            "Dpkg::Options::=--force-confnew",
+            "-o",
+            "Dpkg::Options::=--force-confdef",
+            env=env,
         )
         logger.info("Successfully updated and upgraded apt repositories.")
     except CommandError as e:
         logger.error(f"APT update/upgrade failed: {e}")
-        
-        
-async def install_pipx_via_pip():
-    if not await is_proxmox():
-        logger.info("Not running on Proxmox, skipping pipx installation.")
-        return
+
+
+async def install_pipx():
     result = await run_command_async("apt", "install", "-y", "pipx")
     if result.returncode == 0:
         logger.info("Successfully installed pipx.")
     else:
-        logger.error(f"Failed to install pipx. Return code: {result.returncode}")
-        
+        raise ValueError(f"Failed to install pipx. Return code: {result.returncode}")
+
+
 async def install_poetry_via_pipx():
-    if not await is_proxmox():
-        logger.info("Not running on Proxmox, skipping poetry installation.")
-        return
     result = await run_command_async("pipx", "install", "poetry")
-    if result.returncode == 0:
-        logger.info("Successfully installed poetry via pipx.")
-        await run_command_async("pipx", "ensurepath")
-    else:
+    if result.returncode != 0:
         logger.error(f"Failed to install poetry via pipx. Return code: {result.returncode}")
+        return
 
-    
+    logger.info("Successfully installed poetry via pipx.")
+    await run_command_async("pipx", "ensurepath")
+
+    poetry_bin = os.path.expanduser("~/.local/share/pipx/venvs/poetry/bin")
+    path_line = f'PATH="{poetry_bin}:$PATH"'
+
+    # Decide where to add the PATH depending on privilege level
+    if os.geteuid() == 0:
+        # running as root → edit /etc/environment safely
+        env_file = "/etc/environment"
+        add_path_cmd = f"grep -qxF '{path_line}' {env_file} || echo '{path_line}' >> {env_file}"
+        logger.info("Adding Poetry path to /etc/environment (root mode).")
+    else:
+        # non-root → modify user shell profile instead
+        env_file = os.path.expanduser("~/.bashrc")
+        add_path_cmd = f"grep -qxF 'export {path_line}' {env_file} || " + f"echo 'export {path_line}' >> {env_file}"
+        logger.info("Adding Poetry path to ~/.bashrc (user mode).")
+
+    await run_command_async("bash", "-c", add_path_cmd)
+    logger.info("Poetry installation and path setup complete.")
 
 
+async def install_safe_pc():
+    result = await run_command_async(f"{POETRY_PATH}", "install", cwd=PROJECT_ROOT)
+    if result.returncode == 0:
+        logger.info("Successfully installed SAFE PC via poetry.")
+    else:
+        raise ValueError(f"Failed to install SAFE PC via poetry. Return code: {result.returncode}")
+
+
+async def dl_opnsense_iso():
+    result = await run_command_async(f"{POETRY_PATH}", "run", "dl-opnsense-iso", cwd=PROJECT_ROOT)
+    if result.returncode == 0:
+        logger.info("Successfully downloaded OPNsense ISO.")
+    else:
+        raise ValueError(f"Failed to download OPNsense ISO. Return code: {result.returncode}")
+
+
+async def unregister_post_install_service():
+    service_file = Path("/etc/systemd/system/safe_pc_post_install.service")
+    try:
+        if service_file.exists():
+            await run_command_async("systemctl", "disable", "safe_pc_post_install.service")
+            service_file.unlink()
+            await run_command_async("systemctl", "daemon-reload")
+            logger.info("Unregistered and removed safe_pc_post_install.service")
+        else:
+            logger.info("safe_pc_post_install.service does not exist, skipping removal.")
+    except Exception as e:
+        raise ValueError(f"Failed to unregister post install service: {e}")
+
+
+post_install_steps = (
+    (remove_enterprise_repo, "Removing corporate repo"),
+    (remove_ceph_repo, "Removing Ceph repo"),
+    (set_proxmox_repo_to_community, "Setting Proxmox repo to community"),
+    (update_and_upgrade_apt, "Updating and upgrading apt"),
+    (install_pipx, "Installing pipx via pip"),
+    (install_poetry_via_pipx, "Installing poetry via pipx"),
+    (install_safe_pc, "Installing SAFE PC via poetry"),
+    (dl_opnsense_iso, "Downloading OPNsense ISO"),
+    (unregister_post_install_service, "Unregistering post install service"),
+)
+
+
+@only_on_proxmox
 async def main():
     logger.info("SAFE PC. Proxmox Post Install Script")
-    #1. Remove the corporate repo and set to community
-    logger.info("Removing corporate repo and setting to community")
-    await remove_enterprise_repo()
-    await remove_ceph_repo()
-    await set_proxmox_repo_to_community()
-    #2. Update and upgrade apt
-    logger.info("Updating and upgrading apt")
-    await update_and_upgrade_apt()
-    #3. Install pipx via pip
-    logger.info("Installing pipx via pip")
-    await install_pipx_via_pip()
-    #4. Install poetry via pipx
-    logger.info("Installing poetry via pipx")
-    await install_poetry_via_pipx()
-    logger.info("Post install script completed successfully.")
-    
-    
-    
-    
+
+    for step in post_install_steps:
+        func, description = step
+        logger.debug(f"Starting step: {description}")
+        try:
+            await func() if asyncio.iscoroutinefunction(func) else func()
+            logger.debug(f"Completed step: {description}")
+        except Exception as e:
+            logger.error(f"Error during step '{description}': {e}")
+            logger.info("Aborting post installation due to error.")
+            exit(1)
+
+    logger.info("Post installation steps completed.")
+
 
 if __name__ == "__main__":
     import asyncio
 
     asyncio.run(main())
-    logger.info("Post install script finished execution.")
+    exit(0)

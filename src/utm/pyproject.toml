@@ -1,9 +1,18 @@
-[tool.poetry]
+[project]
 name = "safe_pc.utm"
 version = "0.1.0"
 description = "Standalone UTM submodule (used within safe_pc)"
 authors = [
     {name = "Anthony Tropeano",email = "anthonytropeano@me.com"}
+]
+
+requires-python = ">=3.12"
+dependencies = [
+    "httpx (>=0.28.1,<0.29.0)",
+    "aiofiles (>=24.1.0,<25.0.0)",
+    "ansible (>=12.1.0,<13.0.0)",
+    "tqdm (>=4.67.1,<5.0.0)",
+    "platformdirs (>=4.5.0,<5.0.0)",
 ]
 
 [tool.poetry]
@@ -14,21 +23,6 @@ packages = [{ include = "utm", from = "src" }]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-requires-python = ">=3.12"
 
-dependencies = [
-    "fastapi[standard] (>=0.117.1,<0.118.0)",
-    "uvicorn (>=0.37.0,<0.38.0)",
-    "aiofiles (>=24.1.0,<25.0.0)",
-    "requests (>=2.32.5,<3.0.0)",
-    "python-dotenv (>=1.1.1,<2.0.0)",
-    "beautifulsoup4 (>=4.14.2,<5.0.0)",
-    "ansible (>=12.1.0,<13.0.0)",
-    "platformdirs (>=4.5.0,<5.0.0)",
-]
-
-[dependency-groups]
-dev = [
-    "pytest (>=8.4.2,<9.0.0)",
-    "pytest-asyncio (>=1.2.0,<2.0.0)"
-]
+[tool.poetry.scripts]
+"dl-opnsense-iso" = "utm.opnsense.opnsense:main"

@@ -39,6 +39,15 @@ def main():
         ]
     )
 
+    # move the toml from the root of dist/safe_pc/utm to dist/safe_pc
+    subprocess.run(
+        [
+            "mv",
+            str(src_dist / "utm" / "pyproject.toml"),
+            str(safe_pc_dist / "pyproject.toml"),
+        ]
+    )
+
     print(f"Build completed. Distribution available at: {dist_dir / 'safe_pc'}")
 
 
