@@ -7,7 +7,7 @@ from re import match
 from pathlib import Path
 from logging import getLogger
 from hashlib import sha256, sha512
-from utm.utils.utils import is_verbose
+from utm.scripts.post_startup import is_verbose
 from aiofiles import open as aiofiles_open
 
 CHUNK_SIZE = 8192
@@ -63,9 +63,7 @@ async def verify_sha256(for_file_path: str, expected_hash: str) -> bool:
                 LOGGER.info(f"Hash match for {for_file_path}")
             return True
         else:
-            LOGGER.warning(
-                f"Hash mismatch for {for_file_path}: expected {expected_hash}, got {computed_hash}"
-            )
+            LOGGER.warning(f"Hash mismatch for {for_file_path}: expected {expected_hash}, got {computed_hash}")
             return False
     except Exception as e:
         LOGGER.error(f"Error verifying SHA-256 for {for_file_path}: {e}")
@@ -135,9 +133,7 @@ async def verify_sha512(for_file_path: str, expected_hash: str) -> bool:
                 LOGGER.info(f"Hash match for {for_file_path}")
             return True
         else:
-            LOGGER.warning(
-                f"Hash mismatch for {for_file_path}: expected {expected_hash}, got {computed_hash}"
-            )
+            LOGGER.warning(f"Hash mismatch for {for_file_path}: expected {expected_hash}, got {computed_hash}")
             return False
     except Exception as e:
         LOGGER.error(f"Error verifying SHA-512 for {for_file_path}: {e}")

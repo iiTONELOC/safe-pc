@@ -59,14 +59,22 @@ class OpnSenseISODownloader(ISODownloader):
         downloaded = await super().run(dl_if_exists)
 
         # ensure we downloaded
-        if not downloaded.verified or not self.dest_path:
+        if not downloaded.verified:
             raise OpnSenseDownloadError("Failed to download OPNSense ISO")
+
+        # if we downloaded.verified but dont have a dest_path, we dont have one bc we didn't dl anything and there is
+        # nothing to verify, the DL fn sets verified to true when the file already exists
+        if not self.dest_path:
+            self.verification_status = True
+            return self
 
         # Handle verification of the DL. If we make it this far the public key and sha matches our expected
         # HOWEVER, signatures have not been verified yet
 
         # get the signature file from the same location as the downloaded ISO
-        LOGGER.info(f"Downloading OPNSense ISO signature file from: {self.downloaded_from.replace('.iso.bz2', '.iso.sig')}")
+        LOGGER.info(
+            f"Downloading OPNSense ISO signature file from: {self.downloaded_from.replace('.iso.bz2', '.iso.sig')}"
+        )
         signature_file_text = await fetch_text_from_url(self.downloaded_from.replace(".iso.bz2", ".iso.sig"))
         if not signature_file_text:
             raise OpnSenseDownloadError("Failed to download OPNSense ISO signature file")
@@ -78,7 +86,6 @@ class OpnSenseISODownloader(ISODownloader):
 
         if not decompressed_path or not decompressed_path.exists():
             raise OpnSenseDownloadError("Failed to decompress OPNSense ISO file")
-
 
         # decode and write the signature file
         sig_bytes = b64decode(signature_file_text)
@@ -111,7 +118,6 @@ class OpnSenseISODownloader(ISODownloader):
         self.verification_status = True
         LOGGER.info(f"OPNSense ISO signature verified successfully: {decompressed_path}")
         return self
-
 
     async def __aexit__(
         self,

@@ -4,7 +4,6 @@ from pathlib import Path
 from logging import getLogger
 from collections.abc import Callable
 
-from utm.utils.utils import run_command_async
 from proxmox_auto_installer.iso.helpers import (
     create_answer_file,
     create_auto_installer_mode_file,
@@ -25,6 +24,7 @@ from proxmox_auto_installer.iso.downloader import (
 from utm.utils import (
     setup_logging,
     ISODownloader,
+    run_command_async,
     handle_keyboard_interrupt,
 )
 
@@ -235,29 +235,33 @@ class ModifiedProxmoxISO:
             check=True,
         )
 
-        # create a service that will run safe_pc on first boot
+        # create a service that will run safe_pc on boot
+        # oneshot coupled with remainafterexit ensures the service only runs once, multiple calls to start
+        # will not re-run the service once it has been marked as active
+        # https://www.redhat.com/en/blog/systemd-oneshot-service
         await on_update(14, "Creating systemd service for first boot...")
         service_str = f"""
 [Unit]
-Description=Safe PC Auto Installer Service
+Description=Safe PC Post Startup Service
 Wants=network-online.target
 After=network-online.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart={SAFE_PC_INSTALL_LOCATION}/src/utm/scripts/post_install.py
+ExecStart={SAFE_PC_INSTALL_LOCATION}/src/utm/scripts/post_startup.py
+
 [Install]
 WantedBy=multi-user.target
         """
-        service_path = extracted_squashfs_dir / "etc" / "systemd" / "system" / "safe_pc_auto_installer.service"
+        service_path = extracted_squashfs_dir / "etc" / "systemd" / "system" / "safe_pc_post_startup.service"
         service_path.write_text(service_str)
         self.LOGGER.info(f"Created systemd service at {service_path}")
 
         # enable the service by linking it to multi-user.target.wants
         wants_dir = extracted_squashfs_dir / "etc" / "systemd" / "system" / "multi-user.target.wants"
         wants_dir.mkdir(parents=True, exist_ok=True)
-        link_path = wants_dir / "safe_pc_auto_installer.service"
+        link_path = wants_dir / "safe_pc_post_startup.service"
         await run_command_async(
             "ln",
             "-sf",

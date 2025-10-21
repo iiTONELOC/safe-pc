@@ -83,12 +83,6 @@ async def extract_pub_key_from_mirror(mirror: str = OpnSenseConstants.PUB_KEY_MI
         The mirror only lists the public key, not the SHA256 hashes.
     """
     try:
-        # async with AsyncClient() as client:
-        #     response = await client.get(mirror)
-        #     response.raise_for_status()
-        #     soup = BeautifulSoup(response.text, "html.parser")
-        #     pub_key = extract_public_key_from_text(soup.get_text()) if soup else ""
-        #     return pub_key
         txt = await fetch_text_from_url(mirror)
         pub_key = extract_public_key_from_text(txt)
         return pub_key

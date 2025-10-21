@@ -13,13 +13,7 @@ from utm.utils.crypto import (
 )
 from utm.utils.time import get_current_tz_utc_off_hrs
 from utm.utils.utils import (
-    CmdResult,
-    is_verbose,
-    is_testing,
-    is_production,
-    CommandError,
     get_local_ip,
-    run_command_async,
     fetch_text_from_url,
     calculate_percentage,
     remove_bz2_compression,
@@ -30,10 +24,16 @@ from utm.utils.iso_dl import (
     ISODownloader,
     need_to_download,
 )
-from utm.utils.logs import (
-    setup_logging,
-)
 
+from utm.scripts.post_startup import (
+    CmdResult,
+    CommandError,
+    setup_logging,
+    run_command_async,
+    is_verbose,
+    is_testing,
+    is_production,
+)
 
 __all__ = [
     "CmdResult",

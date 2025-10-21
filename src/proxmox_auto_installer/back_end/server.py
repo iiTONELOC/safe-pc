@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 
-from utm.utils.logs import setup_logging
+from utm.utils import setup_logging
 
 
 load_dotenv()

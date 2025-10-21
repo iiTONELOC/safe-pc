@@ -1,14 +1,11 @@
 import bz2
 import asyncio
-
-from os import getenv
 from typing import Any
 from pathlib import Path
 from logging import getLogger
 from httpx import AsyncClient
 from collections.abc import Callable
 from socket import gethostname, gethostbyname
-from utm.scripts.post_install import CmdResult, CommandError, run_command_async  # type: ignore
 
 
 LOGGER = getLogger(__name__)
@@ -55,33 +52,6 @@ def handle_keyboard_interrupt(
     return wrapper
 
 
-def is_testing() -> bool:
-    """Check if the code is running in a testing environment.
-
-    Returns:
-        bool: True if running tests, False otherwise.
-    """
-    return getenv("CAPSTONE_TESTING", "0") == "1"
-
-
-def is_production() -> bool:
-    """Check if the code is running in a production environment.
-
-    Returns:
-        bool: True if running in production, False otherwise.
-    """
-    return getenv("CAPSTONE_PRODUCTION", "0") == "1"
-
-
-def is_verbose() -> bool:
-    """Check if verbose mode is enabled via command-line arguments.
-
-    Returns:
-        bool: True if verbose mode is enabled, False otherwise.
-    """
-    return getenv("CAPSTONE_VERBOSE", "0") == "1"
-
-
 def calculate_percentage(part: int, whole: int) -> int:
     """Calculate the percentage of `part` with respect to `whole`.
 
@@ -119,7 +89,22 @@ async def fetch_text_from_url(url: str) -> str:
 
 
 async def remove_bz2_compression(iso_path: Path) -> Path:
-    # asynchronously remove the .bz2 compression from the specified file
+    """Remove compression from a file
+
+    Args:
+        iso_path (Path): The path to the compressed file.
+
+    Raises:
+        ValueError: if the file is not a .bz2 compressed file.
+        FileNotFoundError: if the file does not exist.
+
+    Returns:
+        Path: The path to the decompressed file.
+    """
+
+    # ensure the file exists
+    if not iso_path.exists():
+        raise FileNotFoundError(f"File not found: {iso_path}")
 
     # remove the extension
     if iso_path.suffix != ".bz2":

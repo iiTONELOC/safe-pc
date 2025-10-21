@@ -1,7 +1,7 @@
 from os import getenv
 from pathlib import Path
 
-from utm.utils.utils import is_testing, is_production
+from utm.scripts.post_startup import is_testing, is_production
 from platformdirs import user_cache_dir
 
 

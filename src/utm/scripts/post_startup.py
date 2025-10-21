@@ -1,18 +1,121 @@
 #!/usr/bin/python3.13
+"""
+Dependency-Free Proxmox Post Startup Script for SAFE PC.
+
+The script performs the following tasks:
+    1. Checks if running on Proxmox.
+    2. Removes enterprise and Ceph repositories.
+    3. Sets Proxmox repository to community edition.
+    4. Updates and upgrades apt repositories.
+    5. Installs pipx if not already installed.
+    6. Installs poetry via pipx if not already installed.
+    7. Sets the CAPSTONE_PRODUCTION environment variable.
+    8. Installs SAFE PC using poetry.
+    9. Downloads the OPNsense ISO.
+
+Logs @ /opt/capstone/safe_pc/logs/safe_pc.log
+"""
 import os
 import asyncio
 from sys import argv
 from pathlib import Path
-from logging import getLogger
 from dataclasses import dataclass
 from collections.abc import Mapping, Sequence
+from logging.handlers import RotatingFileHandler
+from logging import INFO, Logger, Formatter, StreamHandler, DEBUG, getLogger
 
-logger = getLogger(__name__)
+logger = getLogger("safe_pc.post_startup")
 
-script_path = Path(argv[0]).resolve()
-
-PROJECT_ROOT = script_path.parent.parent
+BACKUP_LOG_COUNT = 5  # in days
+BASH_RC = Path("/etc/bash.bashrc")
+SCRIPT_PATH = Path(argv[0]).resolve()
+PROJECT_ROOT = SCRIPT_PATH.parent.parent
 POETRY_PATH = "/root/.local/share/pipx/venvs/poetry/bin/poetry"
+
+
+# Reusable Exports - Moved here to prevent circular imports - Clearly should go elsewhere
+def is_testing() -> bool:
+    """Check if the code is running in a testing environment.
+
+    Returns:
+        bool: True if running tests, False otherwise.
+    """
+    return os.getenv("CAPSTONE_TESTING", "0") == "1"
+
+
+def is_production() -> bool:
+    """Check if the code is running in a production environment.
+
+    Returns:
+        bool: True if running in production, False otherwise.
+    """
+    return os.getenv("CAPSTONE_PRODUCTION", "0") == "1"
+
+
+def is_verbose() -> bool:
+    """Check if verbose mode is enabled via command-line arguments.
+
+    Returns:
+        bool: True if verbose mode is enabled, False otherwise.
+    """
+    return os.getenv("CAPSTONE_VERBOSE", "0") == "1"
+
+
+def _project_log_dir() -> Path:
+    """Get the project's log directory, creating it if necessary."""
+    log_dir = Path(__file__).resolve().parents[3] / "logs"
+    if not log_dir.exists():
+        log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir
+
+
+def _project_log_file():
+    """Get the project's log file path."""
+    log_file = "safe_pc_tests" if is_testing() else "safe_pc"
+    log_dir = _project_log_dir()
+    log_path = log_dir / f"{log_file}.log"
+    return log_path
+
+
+def setup_logging(level: int = INFO, log_file: str = "safe_pc") -> Logger:
+    """
+    Configure root logging once for the entire process.
+    Returns the package logger for convenience.
+
+    Args:
+        level: The level to set, i.e. INFO, DEBUG, ERROR, etc.
+
+    Returns:
+        The configured root-level logger
+    """
+
+    # determine if we need DEBUG level logging
+    if level != DEBUG and is_testing() or is_verbose():
+        level = DEBUG
+
+    log_path = _project_log_file()
+    fmt = Formatter("%(asctime)s - [%(name)s] - %(levelname)s - %(message)s")
+
+    file_handler = RotatingFileHandler(
+        log_path,
+        mode="a" if not is_testing() else "w",
+        backupCount=BACKUP_LOG_COUNT,
+    )
+    file_handler.setFormatter(fmt)
+
+    # Console handler
+    stream_handler = StreamHandler()
+    stream_handler.setFormatter(fmt)
+
+    # config logger
+    root = getLogger()
+    root.handlers.clear()
+    root.name = log_file
+    root.setLevel(level)
+    root.addHandler(file_handler)
+    root.addHandler(stream_handler)
+
+    return getLogger(log_file)
 
 
 @dataclass
@@ -57,6 +160,13 @@ async def run_command_async(
     if check and rc != 0:
         raise CommandError(cmd, rc, stdout, stderr)
     return CmdResult(stdout, stderr, rc)
+
+
+# End Reusable Exports ------
+
+# ------------------------------------------------------------------------------
+
+# Post Startup --------------
 
 
 async def is_proxmox() -> bool:
@@ -120,9 +230,9 @@ Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
             logger.info(f"Backed up existing repository file to {backup_file}")
 
         # Write the new repository configuration
-        with repo_file.open("w") as f:
+        with open(repo_file, mode="w") as f:
             f.write(repo_str.strip() + "\n")
-        logger.info(f"Set Proxmox repository to community edition in {repo_file}")
+            logger.info(f"Set Proxmox repository to community edition in {repo_file}")
 
     except Exception as e:
         logger.error(f"Failed to set Proxmox repository: {e}")
@@ -149,6 +259,10 @@ async def update_and_upgrade_apt():
 
 
 async def install_pipx():
+    result_check = await run_command_async("which", "pipx", check=False)
+    if result_check.returncode == 0:
+        logger.info("pipx is already installed, skipping installation.")
+        return
     result = await run_command_async("apt", "install", "-y", "pipx")
     if result.returncode == 0:
         logger.info("Successfully installed pipx.")
@@ -157,6 +271,10 @@ async def install_pipx():
 
 
 async def install_poetry_via_pipx():
+    result_check = await run_command_async("which", "poetry", check=False)
+    if result_check.returncode == 0:
+        logger.info("Poetry is already installed, skipping installation.")
+        return
     result = await run_command_async("pipx", "install", "poetry")
     if result.returncode != 0:
         logger.error(f"Failed to install poetry via pipx. Return code: {result.returncode}")
@@ -168,20 +286,24 @@ async def install_poetry_via_pipx():
     poetry_bin = os.path.expanduser("~/.local/share/pipx/venvs/poetry/bin")
     path_line = f'PATH="{poetry_bin}:$PATH"'
 
-    # Decide where to add the PATH depending on privilege level
-    if os.geteuid() == 0:
-        # running as root → edit /etc/environment safely
-        env_file = "/etc/environment"
-        add_path_cmd = f"grep -qxF '{path_line}' {env_file} || echo '{path_line}' >> {env_file}"
-        logger.info("Adding Poetry path to /etc/environment (root mode).")
-    else:
-        # non-root → modify user shell profile instead
-        env_file = os.path.expanduser("~/.bashrc")
-        add_path_cmd = f"grep -qxF 'export {path_line}' {env_file} || " + f"echo 'export {path_line}' >> {env_file}"
-        logger.info("Adding Poetry path to ~/.bashrc (user mode).")
+    with open(BASH_RC, mode="a") as f:  # NOSONAR
+        f.write(f"\nexport {path_line}\n")
 
-    await run_command_async("bash", "-c", add_path_cmd)
     logger.info("Poetry installation and path setup complete.")
+
+
+def set_production_env():
+
+    # check if CAPSTONE_PRODUCTION is already set
+    if os.getenv("CAPSTONE_PRODUCTION", "0") == "1":
+        logger.info("CAPSTONE_PRODUCTION is already set to '1'. Skipping.")
+        return
+
+    path_line = '\nexport CAPSTONE_PRODUCTION="1"\n'
+    with open(BASH_RC, mode="a") as f:
+        f.write(path_line)
+
+        logger.info("Set CAPSTONE_PRODUCTION environment variable to '1' for production mode.")
 
 
 async def install_safe_pc():
@@ -200,38 +322,26 @@ async def dl_opnsense_iso():
         raise ValueError(f"Failed to download OPNsense ISO. Return code: {result.returncode}")
 
 
-async def unregister_post_install_service():
-    service_file = Path("/etc/systemd/system/safe_pc_post_install.service")
-    try:
-        if service_file.exists():
-            await run_command_async("systemctl", "disable", "safe_pc_post_install.service")
-            service_file.unlink()
-            await run_command_async("systemctl", "daemon-reload")
-            logger.info("Unregistered and removed safe_pc_post_install.service")
-        else:
-            logger.info("safe_pc_post_install.service does not exist, skipping removal.")
-    except Exception as e:
-        raise ValueError(f"Failed to unregister post install service: {e}")
-
-
-post_install_steps = (
+# group and loop
+post_startup_steps = (
+    (set_production_env, "Setting production environment variable"),
     (remove_enterprise_repo, "Removing corporate repo"),
     (remove_ceph_repo, "Removing Ceph repo"),
     (set_proxmox_repo_to_community, "Setting Proxmox repo to community"),
     (update_and_upgrade_apt, "Updating and upgrading apt"),
-    (install_pipx, "Installing pipx via pip"),
+    (install_pipx, "Installing pipx"),
     (install_poetry_via_pipx, "Installing poetry via pipx"),
     (install_safe_pc, "Installing SAFE PC via poetry"),
     (dl_opnsense_iso, "Downloading OPNsense ISO"),
-    (unregister_post_install_service, "Unregistering post install service"),
 )
 
 
 @only_on_proxmox
 async def main():
-    logger.info("SAFE PC. Proxmox Post Install Script")
+    setup_logging()  # ensures the logger is configured - poetry calls the main function directly
+    logger.info("SAFE PC. Executing Proxmox Post Startup Script")
 
-    for step in post_install_steps:
+    for step in post_startup_steps:
         func, description = step
         logger.debug(f"Starting step: {description}")
         try:
@@ -242,7 +352,7 @@ async def main():
             logger.info("Aborting post installation due to error.")
             exit(1)
 
-    logger.info("Post installation steps completed.")
+    logger.info("SAFE PC Loaded Successfully")
 
 
 if __name__ == "__main__":
