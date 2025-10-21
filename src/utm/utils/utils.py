@@ -118,6 +118,9 @@ async def remove_bz2_compression(iso_path: Path) -> Path:
             with open(decompressed_path, "wb") as output_file:
                 for data in iter(lambda: input_file.read(100 * 1024), b""):
                     output_file.write(data)
+
+        # remove the original compressed file after successful write - not needed
+        iso_path.unlink(missing_ok=True)
         return decompressed_path
 
     return await loop.run_in_executor(None, decompress)

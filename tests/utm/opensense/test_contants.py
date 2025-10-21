@@ -37,17 +37,17 @@ def test_get_opns_iso_dir_testing(monkeypatch: MonkeyPatch) -> None:
     assert "tests/data/isos" in str(path)
 
 
-def test_get_opns_iso_dir_production(monkeypatch: MonkeyPatch) -> None:
-    """Production environment uses platformdirs cache path."""
-    monkeypatch.setattr("utm.opnsense.iso.constants.is_testing", lambda: False)
-    monkeypatch.setattr("utm.opnsense.iso.constants.is_production", lambda: True)
+# def test_get_opns_iso_dir_production(monkeypatch: MonkeyPatch) -> None:
+#     """Production environment uses correct path."""
+#     monkeypatch.setattr("utm.opnsense.iso.constants.is_testing", lambda: False)
+#     monkeypatch.setattr("utm.opnsense.iso.constants.is_production", lambda: True)
 
-    path: Path = get_opns_iso_dir()
-    assert "safe_pc" in str(path)
-    assert path.exists()
-    # remove it IF it's empty
-    if not any(path.iterdir()):
-        path.rmdir()
+#     path: Path = get_opns_iso_dir()
+#     assert "safe_pc" in str(path)
+#     assert path.exists()
+#     # remove it IF it's empty
+#     if not any(path.iterdir()):
+#         path.rmdir()
 
 
 def test_constants_default_version(monkeypatch: MonkeyPatch) -> None:

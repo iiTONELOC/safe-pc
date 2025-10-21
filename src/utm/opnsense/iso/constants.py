@@ -2,14 +2,14 @@ from os import getenv
 from pathlib import Path
 
 from utm.scripts.post_startup import is_testing, is_production
-from platformdirs import user_cache_dir
 
 
 def get_opns_iso_dir() -> Path:
     if is_testing():
         base_dir = Path(__file__).resolve().parents[4] / "tests" / "data" / "isos" / "opnsense"
     elif is_production():
-        base_dir = Path(user_cache_dir("safe_pc")) / "opnsense" / "iso"
+        # production uses proxmox location for isos
+        base_dir = Path("/var/lib/vz/template/iso/")
     else:
         base_dir = Path(__file__).resolve().parents[4] / "data" / "isos" / "opnsense"
 

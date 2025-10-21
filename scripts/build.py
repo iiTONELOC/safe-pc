@@ -1,10 +1,15 @@
 # generate a build of the project for the proxmox environment
+from os import getenv
 import sys
 import subprocess
 from pathlib import Path
 
 
-def main():
+DEV_PROX_USER = getenv("SAFE_PC_DEV_PROX_USER", "root")
+DEV_PROX_HOST = getenv("SAFE_PC_DEV_PROX_HOST", "10.0.4.238")
+
+
+def main(dev: bool = False):
     print("Building UTM for Proxmox...")
     # move to the root of the project
     project_root = Path(__file__).resolve().parents[1]
@@ -48,8 +53,25 @@ def main():
         ]
     )
 
+    # if dev flag is set, deploy to proxmox
+    if dev:
+        print("Deploying development build to Proxmox...")
+        subprocess.run(
+            [
+                "scp",
+                "-r",
+                str(safe_pc_dist) + "/.",
+                f"{DEV_PROX_USER}@{DEV_PROX_HOST}:/opt/safe_pc/",
+            ]
+        )
+
     print(f"Build completed. Distribution available at: {dist_dir / 'safe_pc'}")
 
 
+def main_dev():
+    main(dev=True)
+
+
 if __name__ == "__main__":
-    main()
+    dev_flag = "--dev" in sys.argv
+    main(dev=dev_flag)

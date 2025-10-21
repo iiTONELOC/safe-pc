@@ -34,8 +34,13 @@ class OpnSenseISODownloader(ISODownloader):
         self.public_key: str = ""
         self.downloaded_from: str = ""
         self.expected_sha256: str = ""
-        self.downloaded_files: list[Path] = []
+        self.work_dir: Path = Path("/tmp/opnsense_iso_downloader")
+        # self.downloaded_files: list[Path] = []
         self.verification_status: bool = False
+
+        # ensure the work dir exists
+        if not self.work_dir.exists():
+            self.work_dir.mkdir(parents=True, exist_ok=True)
 
     # Wrap the original callable to match parent type
     def _wrap_get_iso_info(
@@ -87,26 +92,25 @@ class OpnSenseISODownloader(ISODownloader):
         if not decompressed_path or not decompressed_path.exists():
             raise OpnSenseDownloadError("Failed to decompress OPNSense ISO file")
 
+        sig_path = self.work_dir / (decompressed_path.name + ".sig")
+        pub_key_path = self.work_dir / (decompressed_path.name + ".pub")
+
         # decode and write the signature file
         sig_bytes = b64decode(signature_file_text)
-        sig_path = decompressed_path.with_suffix(".sig")
         sig_path.write_bytes(sig_bytes)
-        self.downloaded_files.append(sig_path)
 
-        # write the public key to a file too
-        pub_key_path = decompressed_path.with_suffix(".pub")
+        # write the public key file
         pub_key_path.write_text(self.public_key)
-        self.downloaded_files.append(pub_key_path)
 
         # verify the signature using openssl
         cmd_result = await run_command_async(
-            "openssl",
+            "/usr/bin/openssl",
             "dgst",
             "-sha256",
             "-verify",
-            str(decompressed_path.with_suffix(".pub")),
+            str(pub_key_path),
             "-signature",
-            str(decompressed_path.with_suffix(".sig")),
+            str(sig_path),
             str(decompressed_path),
             check=False,
         )
@@ -125,6 +129,12 @@ class OpnSenseISODownloader(ISODownloader):
         exc: BaseException | None,
         tb: object | None,
     ) -> None:
+        # clean up the work dir
+        if self.work_dir.exists():
+            for item in self.work_dir.iterdir():
+                if item.is_file():
+                    item.unlink()
+            self.work_dir.rmdir()
         await super().__aexit__(exc_type, exc, tb)
 
     def __await__(self, dl_if_exists: bool = False):

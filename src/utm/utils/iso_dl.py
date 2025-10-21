@@ -211,6 +211,8 @@ class ISODownloader:
             self.iso_name = Path(url).name
             self.iso_path = Path(self.temp_dir.name) / self.iso_name
 
+            LOGGER.info(f"Checking if ISO needs to be downloaded at {self.dest_dir / self.iso_name}...")
+
             if not dl_if_exists and not need_to_download(self.dest_dir / self.iso_name, self.expected_sha256):
                 LOGGER.info("ISO already exists and is valid, skipping download.")
                 self.verified = True

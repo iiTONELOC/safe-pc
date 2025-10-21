@@ -1,17 +1,21 @@
+from logging import getLogger
 from utm.opnsense.iso import (
     OpnSenseConstants,
     OpnSenseISODownloader,
-    OpnSenseDownloadError,
+    # OpnSenseDownloadError,
     get_latest_opns_url_w_hash,
 )
 from utm.utils.utils import handle_keyboard_interrupt
 
+LOGGER = getLogger(__name__)
+
 
 async def download_and_verify_opnsense_iso() -> bool:
     try:
-        download = await OpnSenseISODownloader(get_latest_opns_url_w_hash, OpnSenseConstants.ISO_DIR)
-        return download.verification_status
-    except OpnSenseDownloadError:
+        await OpnSenseISODownloader(get_latest_opns_url_w_hash, OpnSenseConstants.ISO_DIR)
+        return True
+    except Exception as e:
+        LOGGER.error(f"OPNSense ISO download/verification failed: {e}")
         return False
 
 
