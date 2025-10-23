@@ -120,9 +120,7 @@ def generate_self_signed_cert(**kwargs: Any) -> tuple[Path, Path]:
 
 def main():
 
-    parser = ArgumentParser(
-        description="Generate a self-signed ECDSA certificate and private key."
-    )
+    parser = ArgumentParser(description="Generate a self-signed ECDSA certificate and private key.")
     ip = SAFE_PC_CERT_DEFAULTS["common_name"]
     parser.add_argument(
         "--cert_dir",

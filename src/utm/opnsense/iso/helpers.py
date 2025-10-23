@@ -4,9 +4,8 @@ from logging import getLogger
 from asyncio import gather as asyncio_gather
 from secrets import choice as random_choice_secure
 from utm.opnsense.iso.constants import OpnSenseConstants
+from utm.__main__ import is_testing, is_production
 from utm.utils import (
-    is_testing,
-    is_production,
     reach_consensus,
     validate_sha256,
     fetch_text_from_url,

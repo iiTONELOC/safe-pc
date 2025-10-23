@@ -3,7 +3,8 @@ from base64 import b64decode
 from logging import getLogger
 from collections.abc import Callable, Awaitable
 
-from utm.utils import ISODownloader, fetch_text_from_url, remove_bz2_compression, run_command_async
+from utm.__main__ import run_command_async
+from utm.utils import ISODownloader, fetch_text_from_url, remove_bz2_compression
 
 LOGGER = getLogger(__name__)
 
@@ -104,7 +105,7 @@ class OpnSenseISODownloader(ISODownloader):
 
         # verify the signature using openssl
         cmd_result = await run_command_async(
-            "/usr/bin/openssl",
+            "openssl",
             "dgst",
             "-sha256",
             "-verify",

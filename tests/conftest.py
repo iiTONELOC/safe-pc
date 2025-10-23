@@ -1,7 +1,7 @@
 from os import environ
 import pytest
 
-from utm.utils import setup_logging
+from utm.__main__ import setup_logging
 
 
 @pytest.fixture(scope="session", autouse=True)

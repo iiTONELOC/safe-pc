@@ -1,7 +1,7 @@
 from os import getenv
 from pathlib import Path
 
-from utm.scripts.post_startup import is_testing, is_production
+from utm.__main__ import is_testing, is_production
 
 
 def get_opns_iso_dir() -> Path:

@@ -3,10 +3,12 @@ import os
 import asyncio
 from sys import argv
 from pathlib import Path
+from re import search, sub, M
 from dataclasses import dataclass
 from collections.abc import Mapping, Sequence
 from logging.handlers import RotatingFileHandler
 from logging import INFO, Logger, Formatter, StreamHandler, DEBUG, getLogger
+
 
 logger = getLogger("safe_pc.post_startup")
 
@@ -46,9 +48,63 @@ def is_verbose() -> bool:
     return os.getenv("CAPSTONE_VERBOSE", "0") == "1"
 
 
+def set_env_variable(key: str, value: str, system_wide: bool = True):
+    env_path = Path(ENV_P)
+    bashrc_path = Path(BASH_RC)
+    env_path.touch(exist_ok=True)
+    bashrc_path.touch(exist_ok=True)
+
+    def update_file(path: Path, pattern: str, new_line: str):
+        content = path.read_text()
+        if search(pattern, content, flags=M):
+            updated = sub(pattern, new_line, content, flags=M)
+            if updated != content:
+                path.write_text(updated)
+        else:
+            with path.open("a") as f:
+                f.write(f"\n{new_line}\n")
+
+    if system_wide:
+        env_line = f'{key}="{value}"'
+        env_pattern = rf"^{key}=.*$"
+        update_file(env_path, env_pattern, env_line)
+
+    # Update bashrc
+    bash_line = f'export {key}="{value}"'
+    bash_pattern = rf"^export {key}=.*$"
+    update_file(bashrc_path, bash_pattern, bash_line)
+
+    # Set in current environment if not already set
+    if os.getenv(key, "") != value:
+        os.environ[key] = value
+
+
+def remove_env_variable(key: str, system_wide: bool = True):
+    env_path = Path(ENV_P)
+    bashrc_path = Path(BASH_RC)
+
+    def remove_from_file(path: Path, pattern: str):
+        content = path.read_text()
+        updated = sub(pattern, "", content, flags=M)
+        if updated != content:
+            path.write_text(updated)
+
+    if system_wide:
+        env_pattern = rf"^{key}=.*$\n?"
+        remove_from_file(env_path, env_pattern)
+
+    # Remove from bashrc
+    bash_pattern = rf"^export {key}=.*$\n?"
+    remove_from_file(bashrc_path, bash_pattern)
+
+    # Remove from current environment
+    if key in os.environ:
+        del os.environ[key]
+
+
 def _project_log_dir() -> Path:
     """Get the project's log directory, creating it if necessary."""
-    log_dir = Path(__file__).resolve().parents[3] / "logs"
+    log_dir = Path(__file__).resolve().parents[2] / "logs"
     if not log_dir.exists():
         log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
@@ -209,7 +265,7 @@ Components: pve-no-subscription
 Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
     """
     repo_file = Path("/etc/apt/sources.list.d/proxmox.sources")
-
+    logger.info("Setting Proxmox repository to community edition")
     try:
         # Write the new repository configuration
         with open(repo_file, mode="w") as f:
@@ -241,77 +297,167 @@ async def update_and_upgrade_apt():
         logger.error(f"  APT update/upgrade failed: {e}")
 
 
-async def install_pipx():
-    logger.info("Checking for pipx installation...")
-    result_check = await run_command_async("which", "pipx", check=False)
-    if result_check.returncode == 0:
-        logger.info("  pipx is already installed, skipping installation.")
-        return
-    logger.info("  Installing pipx...")
-    result = await run_command_async("apt", "install", "-y", "pipx")
-    if result.returncode == 0:
-        logger.info(" Installed pipx successfully.")
-    else:
-        raise ValueError(f"  Failed to install pipx. Return code: {result.returncode}")
+# async def install_pipx():
+#     logger.info("Checking for pipx installation...")
+#     result_check = await run_command_async("which", "pipx", check=False)
+#     if result_check.returncode == 0:
+#         logger.info("  pipx is already installed, skipping installation.")
+#         return
+#     logger.info("  Installing pipx...")
+#     result = await run_command_async("apt", "install", "-y", "pipx")
+#     if result.returncode == 0:
+#         logger.info("  Installed pipx successfully.")
+#     else:
+#         raise ValueError(f"  Failed to install pipx. Return code: {result.returncode}")
 
 
-async def install_poetry_via_pipx():
-    logger.info("Checking for poetry installation...")
-    result_check = await run_command_async("which", "poetry", check=False)
-    if result_check.returncode == 0:
-        logger.info("  Poetry is already installed, skipping installation.")
-        return
-    logger.info("  Installing poetry via pipx...")
-    result = await run_command_async("pipx", "install", "poetry")
-    if result.returncode != 0:
-        logger.error(f"Failed to install poetry via pipx. Return code: {result.returncode}")
-        return
+# async def install_poetry_via_pipx():
+#     logger.info("Checking for poetry installation...")
 
-    logger.info("  Ensuring pipx path is set...")
-    await run_command_async("pipx", "ensurepath")
+#     # Check if poetry is already installed
+#     result_check = await run_command_async("which", "poetry", check=False)
+#     if result_check.returncode == 0:
+#         logger.info("  Poetry is already installed, skipping installation.")
+#         return
 
-    poetry_bin = os.path.expanduser("~/.local/share/pipx/venvs/poetry/bin")
-    path_line = f'PATH="{poetry_bin}:$PATH"'
+#     # Install Poetry via pipx
+#     logger.info("  Installing poetry via pipx...")
+#     result = await run_command_async("pipx", "install", "poetry")
+#     if result.returncode != 0:
+#         logger.error(f"Failed to install poetry via pipx. Return code: {result.returncode}")
+#         return
 
-    logger.info(f"  Adding poetry to system PATH in {BASH_RC}...")
-    with open(BASH_RC, mode="a") as f:  # NOSONAR
-        f.write(f"\nexport {path_line}\n")
+#     # Ensure pipx paths are in place
+#     logger.info("  Ensuring pipx path is set...")
+#     await run_command_async("pipx", "ensurepath")
 
-    logger.info("  Poetry installed successfully via pipx.")
+#     poetry_bin = Path.home() / ".local" / "share" / "pipx" / "venvs" / "poetry" / "bin"
+
+#     set_env_variable("PATH", f"{poetry_bin}:$PATH", system_wide=False)
+
+#     logger.info("  Poetry installed successfully via pipx.")
 
 
 def set_production_env():
-    # check if CAPSTONE_PRODUCTION is already set
+    # Check current in-memory environment first
     if os.getenv("CAPSTONE_PRODUCTION", "0") == "1":
-        logger.info("CAPSTONE_PRODUCTION is already set to '1'. Skipping.")
+        logger.info("CAPSTONE_PRODUCTION is already set to '1' in current environment. Skipping.")
         return
 
-    path_line = '\nexport CAPSTONE_PRODUCTION="1"\n'
-    logger.info(f"Setting CAPSTONE_PRODUCTION environment variable in {BASH_RC}...")
-    with open(BASH_RC, mode="a") as f:  # NOSONAR
-        f.write(path_line)
-
-    logger.info(f"Setting CAPSTONE_PRODUCTION environment variable in {ENV_P}...")
-    with open(ENV_P, mode="a") as f:  # NOSONAR
-        f.write('CAPSTONE_PRODUCTION="1"\n')
-
-    logger.info("  Set CAPSTONE_PRODUCTION environment variable to '1' for production mode.")
+    set_env_variable("CAPSTONE_PRODUCTION", "1", system_wide=True)
 
 
-async def install_safe_pc():
-    logger.info("Installing SAFE PC via poetry...")
-    result = await run_command_async(f"{POETRY_PATH}", "install", cwd=CWD)
+# async def install_safe_pc():
+#     logger.info("Installing SAFE PC via poetry...")
+#     result = await run_command_async(f"{POETRY_PATH}", "install", cwd=CWD)
+#     if result.returncode == 0:
+#         logger.info("  Successfully installed SAFE PC via poetry.")
+#     else:
+#         err_msg = f"Failed to install SAFE PC via poetry. Return code: {result.returncode}"
+#         logger.error(err_msg)
+#         raise ValueError(err_msg)
+
+
+async def dl_opnsense_iso():
+    # logger.info("Checking for OPNsense ISO via poetry script...")
+    # await run_command_async(f"{POETRY_PATH}", "run", "dl-opnsense-iso", cwd=CWD, env=os.environ)
+    await run_command_async(
+        "venv/bin/python3",
+        "src/utm/opnsense/opnsense.py",
+        cwd=CWD,
+        env=os.environ,
+    )
+
+
+async def create_opnsense_vm():
+    logger.info("Creating OPNsense VM via poetry script...")
+    # res = await run_command_async(f"{POETRY_PATH}", "run", "create-opnsense-vm", cwd=CWD, check=False, env=os.environ)
+    res = await run_command_async(
+        "venv/bin/python3",
+        "src/utm/opnsense/vm_creator.py",
+        cwd=CWD,
+        check=False,
+        env=os.environ,
+    )
+    # get the stdout and stderr
+    stdout = res.stdout or ""
+    stderr = res.stderr or ""
+
+    # log the outputs for debugging
+    if stdout:
+        logger.info(f"OPNsense VM Creation Output: {stdout}")
+    if stderr:
+        logger.error(f"OPNsense VM Creation Error Output: {stderr}")
+
+
+async def install_pythonvenv():
+    logger.info("Checking for python3-venv installation...")
+    result_check = await run_command_async("which", "python3-venv", check=False)
+    if result_check.returncode == 0:
+        logger.info("  python3-venv is already installed, skipping installation.")
+        return
+    logger.info("  Installing python3-venv...")
+    result = await run_command_async("apt", "install", "-y", "python3-venv", check=False)
+
     if result.returncode == 0:
-        logger.info("  Successfully installed SAFE PC via poetry.")
+        logger.info("  Installed python3-venv successfully.")
     else:
-        err_msg = f"Failed to install SAFE PC via poetry. Return code: {result.returncode}"
+        raise ValueError(f"  Failed to install python3-venv. Return code: {result.returncode}")
+
+
+async def create_venv():
+    venv_path = Path(CWD) / "venv"
+    if venv_path.exists():
+        logger.info("Python virtual environment already exists, skipping creation.")
+        return
+
+    logger.info("Creating Python virtual environment...")
+    result = await run_command_async("python3", "-m", "venv", str(venv_path), check=False)
+
+    if result.returncode == 0:
+        logger.info("  Created Python virtual environment successfully.")
+    else:
+        raise ValueError(f"  Failed to create Python virtual environment. Return code: {result.returncode}")
+
+
+async def install_requirements():
+    logger.info("Installing Python requirements in virtual environment...")
+    venv_path = Path(CWD) / "venv"
+    pip_path = venv_path / "bin" / "pip"
+    requirements_file = Path(CWD) / "requirements.txt"
+
+    if not requirements_file.exists():
+        logger.error(f"  Requirements file not found at {requirements_file}.")
+        return
+
+    result = await run_command_async(str(pip_path), "install", "-r", str(requirements_file), check=False)
+
+    if result.returncode == 0:
+        logger.info("  Installed Python requirements successfully.")
+    else:
+        raise ValueError(f"  Failed to install Python requirements. Return code: {result.returncode}")
+
+
+async def install_safe_pc_via_pip():
+    # install -e so modules imports work correctly
+
+    logger.info("Installing SAFE PC via pip in virtual environment...")
+    venv_path = Path(CWD) / "venv"
+    pip_path = venv_path / "bin" / "pip"
+    result = await run_command_async(str(pip_path), "install", "-e", CWD, check=False)
+    if result.returncode == 0:
+        logger.info("  Successfully installed SAFE PC via pip in virtual environment.")
+    else:
+        err_msg = f"Failed to install SAFE PC via pip in virtual environment. Return code: {result.returncode}"
         logger.error(err_msg)
         raise ValueError(err_msg)
 
 
-async def dl_opnsense_iso():
-    logger.info("Checking for OPNsense ISO via poetry script...")
-    await run_command_async(f"{POETRY_PATH}", "run", "dl-opnsense-iso", cwd=CWD, env={"CAPSTONE_PRODUCTION": "1"})
+async def setup_venv_reqs_and_install_safe_pc():
+    await install_pythonvenv()
+    await create_venv()
+    await install_requirements()
+    await install_safe_pc_via_pip()
 
 
 # group and loop
@@ -321,10 +467,12 @@ post_startup_steps = (
     (remove_ceph_repo, "Removing Ceph repo"),
     (set_proxmox_repo_to_community, "Setting Proxmox repo to community"),
     (update_and_upgrade_apt, "Updating and upgrading apt"),
-    (install_pipx, "Installing pipx"),
-    (install_poetry_via_pipx, "Installing poetry via pipx"),
-    (install_safe_pc, "Installing SAFE PC via poetry"),
+    # (install_pipx, "Installing pipx"),
+    # (install_poetry_via_pipx, "Installing poetry via pipx"),
+    # (install_safe_pc, "Installing SAFE PC via poetry"),
+    (setup_venv_reqs_and_install_safe_pc, "Setting up venv, installing requirements, and installing SAFE PC via pip"),
     (dl_opnsense_iso, "Checking for OPNsense ISO"),
+    (create_opnsense_vm, "Checking for OPNsense VM"),
 )
 
 

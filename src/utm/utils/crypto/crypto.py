@@ -7,7 +7,7 @@ from re import match
 from pathlib import Path
 from logging import getLogger
 from hashlib import sha256, sha512
-from utm.scripts.post_startup import is_verbose
+from utm.__main__ import is_verbose
 from aiofiles import open as aiofiles_open
 
 CHUNK_SIZE = 8192

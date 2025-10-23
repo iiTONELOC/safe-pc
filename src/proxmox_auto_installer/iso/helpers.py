@@ -1,5 +1,5 @@
 from pathlib import Path
-from utm.utils import get_local_ip
+from utm.utils.utils import get_local_ip
 
 
 def ensure_flag_file(path: Path, flag_name: str) -> None:

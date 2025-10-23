@@ -17,7 +17,10 @@ DISK_CONFIG_DEFAULTS: dict[str, Any] = {
     "filesystem": "zfs",
     "zfs_raid": "raid0",
     "btrfs_raid": None,
-    "disk_list": ["/dev/nvme0n1", "/dev/nvme0n2", "/dev/sda", "/dev/sdb"],
+    # NOSONAR TODO: Allow user to specify disks in GUI
+    "disk_list": [
+        "/dev/sda",
+    ],
 }
 
 

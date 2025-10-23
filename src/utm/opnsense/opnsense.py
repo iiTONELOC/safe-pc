@@ -2,7 +2,6 @@ from logging import getLogger
 from utm.opnsense.iso import (
     OpnSenseConstants,
     OpnSenseISODownloader,
-    # OpnSenseDownloadError,
     get_latest_opns_url_w_hash,
 )
 from utm.utils.utils import handle_keyboard_interrupt
@@ -22,7 +21,7 @@ async def download_and_verify_opnsense_iso() -> bool:
 @handle_keyboard_interrupt
 def main():
     import asyncio
-    from utm.utils import setup_logging
+    from utm.__main__ import setup_logging
 
     setup_logging()
     result = asyncio.run(download_and_verify_opnsense_iso())

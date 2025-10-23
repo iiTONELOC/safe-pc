@@ -4,6 +4,7 @@ from pathlib import Path
 from logging import getLogger
 from collections.abc import Callable
 
+
 from proxmox_auto_installer.iso.helpers import (
     create_answer_file,
     create_auto_installer_mode_file,
@@ -15,21 +16,22 @@ from proxmox_auto_installer.iso.tools import (
     xorriso_extract_iso,
     replace_initrd_file,
 )
-
 from proxmox_auto_installer.iso.downloader import (
     validate_iso_url,
     get_iso_folder_path,
     get_latest_prox_url_w_hash,
 )
-from utm.utils import (
+
+from utm.opnsense.iso.constants import OpnSenseConstants
+from utm.opnsense import download_and_verify_opnsense_iso
+from utm.__main__ import (
     setup_logging,
-    ISODownloader,
     run_command_async,
-    handle_keyboard_interrupt,
 )
+from utm.utils import handle_keyboard_interrupt, ISODownloader
 
 
-TOTAL_STEPS = 17
+TOTAL_STEPS = 19
 SAFE_PC_INSTALL_LOCATION = "/opt/safe_pc"
 
 
@@ -243,13 +245,25 @@ class ModifiedProxmoxISO:
         service_str = f"""
 [Unit]
 Description=Safe PC Post Startup Service
-Wants=network-online.target
-After=network-online.target
+# Ensure network, storage, and Proxmox subsystems are ready
+After=network-online.target zfs-import.target zfs-load-key.service pvedaemon.service pveproxy.service pvestatd.service pvestats.service pve-guests.service
+Wants=network-online.target zfs-import.target
+
 
 [Service]
 Type=oneshot
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=-/etc/environment
 RemainAfterExit=yes
-ExecStart={SAFE_PC_INSTALL_LOCATION}/src/utm/scripts/post_startup.py
+ExecStartPre=/usr/bin/sleep 10
+ExecStart=/usr/bin/python3 {SAFE_PC_INSTALL_LOCATION}/src/utm
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=safe-pc-post-startup
+
+# Gracefully handle reboots triggered by the script
+SuccessAction=reboot
+Restart=no
 
 [Install]
 WantedBy=multi-user.target
@@ -270,7 +284,33 @@ WantedBy=multi-user.target
             check=True,
         )
 
-        await on_update(15, "Repacking rootfs...")
+        # download opnsense iso now and roll it up into the proxmox iso at
+        # the expected location /var/lib/vz/template/iso/
+        await on_update(15, "Downloading OPNsense ISO...")
+        success = await download_and_verify_opnsense_iso()
+        if not success:
+            self.LOGGER.error("Failed to download OPNsense ISO")
+            return None
+
+        self.LOGGER.info("Downloaded OPNsense ISO successfully, moving to rootfs...")
+
+        # ensure the target directory exists
+        target_iso_dir = extracted_squashfs_dir / "var" / "lib" / "vz" / "template" / "iso"
+        target_iso_dir.mkdir(parents=True, exist_ok=True)
+
+        # the downloaded iso is t iso dir/opnsensverse-xx.x-dvd-amd64.iso
+        opnsense_iso_source = OpnSenseConstants.ISO_DIR / f"OPNsense-{OpnSenseConstants.CURRENT_VERSION}-dvd-amd64.iso"
+
+        await on_update(16, "Copying OPNsense ISO to rootfs...")
+        await run_command_async(
+            "cp",
+            str(opnsense_iso_source),
+            str(target_iso_dir / opnsense_iso_source.name),
+            check=True,
+        )
+        self.LOGGER.info(f"Copied OPNsense ISO to {target_iso_dir}, successfully. Repacking rootfs...")
+
+        await on_update(17, "Repacking rootfs...")
         tmp_squash = Path("/tmp/pve-base.squashfs")
 
         status = await run_command_async(
@@ -297,7 +337,7 @@ WantedBy=multi-user.target
 
         # 13. Repack entire ISO
 
-        await on_update(16, "Repacking modified ISO...")
+        await on_update(TOTAL_STEPS - 1, "Repacking modified ISO...")
         self.LOGGER.info(f"Repacking modified ISO with xorriso...: source {self.extracted_iso_dir} output {out}")
         ok = await xorriso_repack_iso(
             unpacked_iso_dir=self.extracted_iso_dir,

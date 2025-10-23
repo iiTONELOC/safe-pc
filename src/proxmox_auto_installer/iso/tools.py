@@ -2,7 +2,7 @@ import asyncio, os, tempfile, shlex, stat
 from shutil import copy2
 from pathlib import Path
 from logging import getLogger
-from utm.utils import run_command_async
+from utm.__main__ import run_command_async
 
 XORRISO = "xorriso"
 LOGGER = getLogger("safe_pc.proxmox_auto_installer.iso:tools" if __name__ == "__main__" else __name__)

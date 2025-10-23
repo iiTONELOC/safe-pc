@@ -8,7 +8,7 @@ from pathlib import Path
 from httpx import AsyncClient
 from logging import getLogger
 
-from utm.utils import is_testing
+from utm.__main__ import is_testing
 
 from bs4 import BeautifulSoup
 
