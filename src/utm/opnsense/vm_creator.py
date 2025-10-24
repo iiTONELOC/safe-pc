@@ -35,12 +35,7 @@ async def get_system_resources():
 
 async def does_production_fw_exist() -> bool:
     # check if the production firewall VM exists
-    cmd = [
-        "qm",
-        "list",
-    ]
-
-    result: CmdResult = await run_command_async(*cmd, check=False)
+    result: CmdResult = await run_command_async(*["qm", "list"], check=False)
     output = result.stdout if result.stdout else ""
     global existing_num
     for line in output.splitlines():
@@ -67,7 +62,7 @@ async def handle_pasthrough_configuration(pci_nics: list[str]):
     await run_command_async("/usr/sbin/reboot", check=False)
 
 
-def get_create_vm_command(fw_name: str, vm_id: int, cpu_cores: int, memory_gb: int, disk_size_gb: int) -> list[str]:
+def get_create_vm_command(fw_name: str, vm_id: int, cpu_cores: int, memory_gb: int) -> list[str]:
     return [
         "qm",
         "create",
@@ -82,27 +77,74 @@ def get_create_vm_command(fw_name: str, vm_id: int, cpu_cores: int, memory_gb: i
         str(cpu_cores),
         "--sockets",
         "1",
-        "--net0",
-        "virtio,bridge=vmbr0",
+        "--cpu",
+        "host",
+        "--bios",
+        "seabios",
+        "--machine",
+        "q35",
         "--scsihw",
         "virtio-scsi-pci",
-        "--scsi0",
-        f"local-zfs:vm-{vm_id}-disk-0,size={disk_size_gb}G",
-        "--ide2",
-        f"local:iso/OPNsense-{OpnSenseConstants.CURRENT_VERSION}-dvd-amd64.iso,media=cdrom",
         "--boot",
-        "c",
-        "--bootdisk",
-        "scsi0",
+        "order=scsi0",
+        "--serial0",
+        "socket",
+        "--vga",
+        "serial0",
     ]
 
 
 def get_appropriate_resources(cpu_cores: int, memory_gb: int, disk_size_gb: int) -> tuple[int, int, int]:
-    # Allocate resources with minimums
-    vm_cpu_cores = max(2, int(cpu_cores))
-    vm_memory_gb = max(8, int(memory_gb * 0.90))
-    vm_disk_size_gb = max(64, int(disk_size_gb * 0.50))
+    # enforces mins of 2 cores, 8GB RAM, 40GB disk space
+    # looks for a max of 85% cpu cores and RAM, and with 64GB disk space
+
+    if cpu_cores < 3:
+        logger.warning("CPU has less than 3 cores; allocating all available cores to VM.")
+        vm_cpu_cores = cpu_cores
+    elif cpu_cores < 2:
+        raise ValueError("Not enough CPU cores to create OPNsense VM.")
+    else:
+        vm_cpu_cores = max(3, int(cpu_cores * 0.85))
+
+    if memory_gb < 12:
+        logger.warning("System has less than 12GB RAM; allocating 90%% of available RAM to VM.")
+        vm_memory_gb = max(8, int(memory_gb * 0.90))
+    elif memory_gb < 8:
+        raise ValueError("System memory is too low to create OPNsense VM.")
+    else:
+        vm_memory_gb = max(12, int(memory_gb * 0.85))
+
+    if disk_size_gb < 64:
+        logger.warning("Disk size is less than 64GB; allocating 90%% of available disk to VM.")
+        vm_disk_size_gb = max(40, int(disk_size_gb * 0.90))
+    elif disk_size_gb < 40:
+        raise ValueError("Disk size is too small to create OPNsense VM.")
+    else:
+        vm_disk_size_gb = 64
+
     return vm_cpu_cores, vm_memory_gb, vm_disk_size_gb
+
+
+def filter_pci_nics(pci_nics: list[str]) -> list[str]:
+    filtered_pci_nics: list[str] = []
+    seen_devices: set[str] = set()
+
+    for pci_id in pci_nics:
+        # Split into domain, bus, device.function
+        # Example: 0000:03:00.1 -> domain=0000, bus=03, dev_func=00.1
+        parts = pci_id.split(":")
+        if len(parts) != 3:
+            continue  # skip malformed entries
+
+        domain_bus = ":".join(parts[:2])  # "0000:03"
+        device = parts[2].split(".")[0]  # "00"
+        key = f"{domain_bus}:{device}"  # "0000:03:00"
+
+        if key not in seen_devices:
+            seen_devices.add(key)
+            filtered_pci_nics.append(pci_id)
+
+    return filtered_pci_nics
 
 
 async def create_new_opnsense_vm(
@@ -116,15 +158,84 @@ async def create_new_opnsense_vm(
 ):
 
     result: CmdResult = await run_command_async(
-        *get_create_vm_command(fw_name, vm_id, vm_cpu_cores, vm_memory_gb, vm_disk_size_gb),
+        *get_create_vm_command(fw_name, vm_id, vm_cpu_cores, vm_memory_gb),
         check=False,
     )
     if result.returncode != 0:
         logger.error(f"Failed to create OPNsense VM: {result.stderr}")
         return False
 
+    # create disk
+    result: CmdResult = await run_command_async(
+        *[
+            "zfs",
+            "create",
+            "-V",
+            f"{vm_disk_size_gb}G",
+            "-o",
+            "volblocksize=16K",
+            "-o",
+            "compression=lz4",
+            f"rpool/vm-data/vm-{vm_id}-disk-0",
+        ],
+        check=False,
+    )
+    if result.returncode != 0:
+        logger.error(f"Failed to create disk for OPNsense VM: {result.stderr}")
+        return False
+
+    # attach disk
+    result: CmdResult = await run_command_async(
+        *[
+            "qm",
+            "set",
+            str(vm_id),
+            "--scsihw",
+            "virtio-scsi-pci",
+            "--scsi0",
+            f"zfs-vm-data:vm-{vm_id}-disk-0,size={vm_disk_size_gb}G,ssd=1,discard=on",
+        ],
+        check=False,
+    )
+
+    # Check for disk creation errors
+    if result.returncode != 0:
+        logger.error(f"Failed to create and attach disk for OPNsense VM: {result.stderr}")
+        return False
+
+    # attach the iso (its really an img)
+    await run_command_async(
+        *[
+            "qm",
+            "importdisk",
+            str(vm_id),
+            # path tot he iso
+            f"/var/lib/vz/template/iso/OPNsense-{OpnSenseConstants.CURRENT_VERSION}-serial-amd64.iso",
+            "local-zfs",
+        ],
+        check=False,
+    )
+
+    result: CmdResult = await run_command_async(
+        *[
+            "qm",
+            "set",
+            str(vm_id),
+            "--scsihw",
+            "virtio-scsi-pci",
+            "--scsi1",
+            f"local-zfs:vm-{vm_id}-disk-0",
+            "--boot",
+            "order=scsi1;scsi0",
+        ],
+        check=False,
+    )
+    if result.returncode != 0:
+        logger.error(f"Failed to attach ISO to OPNsense VM: {result.stderr}")
+        return False
+
     # Attach first PCI NICs
-    for idx, pci_id in enumerate(pci_nics):
+    for idx, pci_id in enumerate(filter_pci_nics(pci_nics)):
         result: CmdResult = await run_command_async(
             *[
                 "qm",
@@ -202,10 +313,15 @@ async def create_opnsense_vm():
     )
 
     vm_id = existing_num + 100
-
-    # await create_new_opnsense_vm(fw_name, vm_id, vm_cpu_cores, vm_memory_gb, vm_disk_size_gb, pci_nics, is_prod)
-
-    logger.info(f"READY TO CREATE OPNsense VM {vm_id} (skipped in this run).")
+    await create_new_opnsense_vm(
+        fw_name,
+        vm_id,
+        vm_cpu_cores,
+        vm_memory_gb,
+        vm_disk_size_gb,
+        pci_nics,
+        is_prod,
+    )
 
     return True
 

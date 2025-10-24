@@ -1,7 +1,8 @@
 # generate a build of the project for the proxmox environment
-from os import getenv
+
 import sys
 import subprocess
+from os import getenv
 from pathlib import Path
 
 
@@ -75,6 +76,7 @@ httpx>=0.28.1,<0.29.0
 aiofiles>=24.1.0,<25.0.0
 ansible>=12.1.0,<13.0.0
 tqdm>=4.67.1,<5.0.0
+pexpect>=4.9.0,<5.0.0
     """
 
     with open(requirements_file, "w") as f:
@@ -88,5 +90,4 @@ def main_dev():
 
 
 if __name__ == "__main__":
-    dev_flag = "--dev" in sys.argv
-    main(dev=dev_flag)
+    main(dev="--dev" in sys.argv)

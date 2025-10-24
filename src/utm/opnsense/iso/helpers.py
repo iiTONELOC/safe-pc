@@ -205,7 +205,7 @@ async def get_latest_opns_url_w_hash() -> tuple[str, str, str]:
             LOGGER.error(err_msg)
             raise ValueError(err_msg)
 
-        iso_url = f"{url}/OPNsense-{OpnSenseConstants.CURRENT_VERSION}-dvd-amd64.iso.bz2"
+        iso_url = f"{url}/OPNsense-{OpnSenseConstants.CURRENT_VERSION}-serial-amd64.img.bz2"
 
         return iso_url, sha256, key
     except Exception as e:

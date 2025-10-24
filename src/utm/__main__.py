@@ -17,7 +17,6 @@ BACKUP_LOG_COUNT = 5  # in days
 ENV_P = Path("/etc/environment")
 BASH_RC = Path("/etc/bash.bashrc")
 SCRIPT_PATH = Path(argv[0]).resolve()
-POETRY_PATH = "/root/.local/share/pipx/venvs/poetry/bin/poetry"
 
 
 # Reusable Exports - Moved here to prevent circular imports - Clearly should go elsewhere
@@ -110,7 +109,7 @@ def _project_log_dir() -> Path:
     return log_dir
 
 
-def _project_log_file():
+def _project_log_file() -> Path:
     """Get the project's log file path."""
     log_file = "safe_pc_tests" if is_testing() else "safe_pc"
     log_dir = _project_log_dir()
@@ -297,47 +296,6 @@ async def update_and_upgrade_apt():
         logger.error(f"  APT update/upgrade failed: {e}")
 
 
-# async def install_pipx():
-#     logger.info("Checking for pipx installation...")
-#     result_check = await run_command_async("which", "pipx", check=False)
-#     if result_check.returncode == 0:
-#         logger.info("  pipx is already installed, skipping installation.")
-#         return
-#     logger.info("  Installing pipx...")
-#     result = await run_command_async("apt", "install", "-y", "pipx")
-#     if result.returncode == 0:
-#         logger.info("  Installed pipx successfully.")
-#     else:
-#         raise ValueError(f"  Failed to install pipx. Return code: {result.returncode}")
-
-
-# async def install_poetry_via_pipx():
-#     logger.info("Checking for poetry installation...")
-
-#     # Check if poetry is already installed
-#     result_check = await run_command_async("which", "poetry", check=False)
-#     if result_check.returncode == 0:
-#         logger.info("  Poetry is already installed, skipping installation.")
-#         return
-
-#     # Install Poetry via pipx
-#     logger.info("  Installing poetry via pipx...")
-#     result = await run_command_async("pipx", "install", "poetry")
-#     if result.returncode != 0:
-#         logger.error(f"Failed to install poetry via pipx. Return code: {result.returncode}")
-#         return
-
-#     # Ensure pipx paths are in place
-#     logger.info("  Ensuring pipx path is set...")
-#     await run_command_async("pipx", "ensurepath")
-
-#     poetry_bin = Path.home() / ".local" / "share" / "pipx" / "venvs" / "poetry" / "bin"
-
-#     set_env_variable("PATH", f"{poetry_bin}:$PATH", system_wide=False)
-
-#     logger.info("  Poetry installed successfully via pipx.")
-
-
 def set_production_env():
     # Check current in-memory environment first
     if os.getenv("CAPSTONE_PRODUCTION", "0") == "1":
@@ -347,47 +305,13 @@ def set_production_env():
     set_env_variable("CAPSTONE_PRODUCTION", "1", system_wide=True)
 
 
-# async def install_safe_pc():
-#     logger.info("Installing SAFE PC via poetry...")
-#     result = await run_command_async(f"{POETRY_PATH}", "install", cwd=CWD)
-#     if result.returncode == 0:
-#         logger.info("  Successfully installed SAFE PC via poetry.")
-#     else:
-#         err_msg = f"Failed to install SAFE PC via poetry. Return code: {result.returncode}"
-#         logger.error(err_msg)
-#         raise ValueError(err_msg)
-
-
 async def dl_opnsense_iso():
-    # logger.info("Checking for OPNsense ISO via poetry script...")
-    # await run_command_async(f"{POETRY_PATH}", "run", "dl-opnsense-iso", cwd=CWD, env=os.environ)
     await run_command_async(
         "venv/bin/python3",
         "src/utm/opnsense/opnsense.py",
         cwd=CWD,
         env=os.environ,
     )
-
-
-async def create_opnsense_vm():
-    logger.info("Creating OPNsense VM via poetry script...")
-    # res = await run_command_async(f"{POETRY_PATH}", "run", "create-opnsense-vm", cwd=CWD, check=False, env=os.environ)
-    res = await run_command_async(
-        "venv/bin/python3",
-        "src/utm/opnsense/vm_creator.py",
-        cwd=CWD,
-        check=False,
-        env=os.environ,
-    )
-    # get the stdout and stderr
-    stdout = res.stdout or ""
-    stderr = res.stderr or ""
-
-    # log the outputs for debugging
-    if stdout:
-        logger.info(f"OPNsense VM Creation Output: {stdout}")
-    if stderr:
-        logger.error(f"OPNsense VM Creation Error Output: {stderr}")
 
 
 async def install_pythonvenv():
@@ -460,6 +384,67 @@ async def setup_venv_reqs_and_install_safe_pc():
     await install_safe_pc_via_pip()
 
 
+async def create_vm_data_pool_if_missing():
+    # use rpool/vm-data
+    result: CmdResult = await run_command_async(
+        *[
+            "zfs",
+            "list",
+            "rpool/vm-data",
+        ],
+        check=False,
+    )
+
+    if result.returncode != 0:
+        logger.info("Creating ZFS dataset rpool/vm-data for VM storage...")
+        result_create: CmdResult = await run_command_async(
+            *[
+                "zfs",
+                "create",
+                "-o",
+                "mountpoint=none",
+                "rpool/vm-data",
+            ],
+            check=False,
+        )
+        if result_create.returncode != 0:
+            logger.error(f"Failed to create ZFS dataset rpool/vm-data: {result_create.stderr}")
+        else:
+            logger.info("Successfully created ZFS dataset rpool/vm-data.")
+            # register dataset with Proxmox
+            await run_command_async(
+                *[
+                    "pvesm",
+                    "add",
+                    "zfspool",
+                    "zfs-vm-data",
+                    "--pool",
+                    "rpool/vm-data",
+                    "--content",
+                    "images,rootdir",
+                    "--sparse",
+                    "1",
+                ],
+                check=False,
+            )
+
+
+async def create_opnsense_vm():
+    logger.info("Creating OPNsense VM...")
+    res = await run_command_async(
+        "venv/bin/python3",
+        "src/utm/opnsense/vm_creator.py",
+        cwd=CWD,
+        check=False,
+        env=os.environ,
+    )
+    # all output will go to stderr regardless of success or failure
+    stderr = res.stderr or ""
+
+    if stderr:
+        logger.error(f"OPNsense VM Creation Output: {stderr}")
+
+
 # group and loop
 post_startup_steps = (
     (set_production_env, "Setting production environment variable"),
@@ -467,11 +452,9 @@ post_startup_steps = (
     (remove_ceph_repo, "Removing Ceph repo"),
     (set_proxmox_repo_to_community, "Setting Proxmox repo to community"),
     (update_and_upgrade_apt, "Updating and upgrading apt"),
-    # (install_pipx, "Installing pipx"),
-    # (install_poetry_via_pipx, "Installing poetry via pipx"),
-    # (install_safe_pc, "Installing SAFE PC via poetry"),
     (setup_venv_reqs_and_install_safe_pc, "Setting up venv, installing requirements, and installing SAFE PC via pip"),
     (dl_opnsense_iso, "Checking for OPNsense ISO"),
+    (create_vm_data_pool_if_missing, "Creating VM data pool if missing"),
     (create_opnsense_vm, "Checking for OPNsense VM"),
 )
 

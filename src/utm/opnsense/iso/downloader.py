@@ -79,19 +79,19 @@ class OpnSenseISODownloader(ISODownloader):
 
         # get the signature file from the same location as the downloaded ISO
         LOGGER.info(
-            f"Downloading OPNSense ISO signature file from: {self.downloaded_from.replace('.iso.bz2', '.iso.sig')}"
+            f"Downloading OPNSense ISO signature file from: {self.downloaded_from.replace('.img.bz2', '.img.sig')}"
         )
-        signature_file_text = await fetch_text_from_url(self.downloaded_from.replace(".iso.bz2", ".iso.sig"))
+        signature_file_text = await fetch_text_from_url(self.downloaded_from.replace(".img.bz2", ".img.sig"))
         if not signature_file_text:
-            raise OpnSenseDownloadError("Failed to download OPNSense ISO signature file")
+            raise OpnSenseDownloadError("Failed to download OPNSense IMG signature file")
 
         # decompress the iso before verifying the signature - OPNSense uses bz2 compression
         # And calculates the sha256 of the decompressed file
-        LOGGER.info(f"Decompressing OPNSense ISO file: {self.dest_path}")
+        LOGGER.info(f"Decompressing OPNSense IMG file: {self.dest_path}")
         decompressed_path = await remove_bz2_compression(self.dest_path)
 
         if not decompressed_path or not decompressed_path.exists():
-            raise OpnSenseDownloadError("Failed to decompress OPNSense ISO file")
+            raise OpnSenseDownloadError("Failed to decompress OPNSense IMG file")
 
         sig_path = self.work_dir / (decompressed_path.name + ".sig")
         pub_key_path = self.work_dir / (decompressed_path.name + ".pub")

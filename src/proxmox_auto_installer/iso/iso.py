@@ -1,3 +1,4 @@
+import tempfile
 from uuid import uuid4
 from typing import Any
 from pathlib import Path
@@ -31,7 +32,7 @@ from utm.__main__ import (
 from utm.utils import handle_keyboard_interrupt, ISODownloader
 
 
-TOTAL_STEPS = 19
+TOTAL_STEPS = 20
 SAFE_PC_INSTALL_LOCATION = "/opt/safe_pc"
 
 
@@ -298,19 +299,43 @@ WantedBy=multi-user.target
         target_iso_dir = extracted_squashfs_dir / "var" / "lib" / "vz" / "template" / "iso"
         target_iso_dir.mkdir(parents=True, exist_ok=True)
 
-        # the downloaded iso is t iso dir/opnsensverse-xx.x-dvd-amd64.iso
-        opnsense_iso_source = OpnSenseConstants.ISO_DIR / f"OPNsense-{OpnSenseConstants.CURRENT_VERSION}-dvd-amd64.iso"
+        # the downloaded iso is t iso dir/opnsensverse-xx.x-serial-amd64.iso
+        opnsense_iso_source = (
+            OpnSenseConstants.ISO_DIR / f"OPNsense-{OpnSenseConstants.CURRENT_VERSION}-serial-amd64.img"
+        )
 
-        await on_update(16, "Copying OPNsense ISO to rootfs...")
+        # await run_command_async(
+        #     "cp",
+        #     str(opnsense_iso_source),
+        #     str(target_iso_dir / opnsense_iso_source.name),
+        #     check=True,
+        # )
+
+        await on_update(16, "Converting OPNsense IMG to ISO format...")
+        temp_iso_path = tempfile.mkstemp(suffix=".iso")[1]
+
+        # convert the img to iso using qemu-img
         await run_command_async(
-            "cp",
+            "qemu-img",
+            "convert",
+            "-O",
+            "raw",
             str(opnsense_iso_source),
-            str(target_iso_dir / opnsense_iso_source.name),
+            temp_iso_path,
             check=True,
         )
-        self.LOGGER.info(f"Copied OPNsense ISO to {target_iso_dir}, successfully. Repacking rootfs...")
+        await on_update(17, "Moving OPNsense ISO to rootfs...")
+        # the serial is an img, so we need to convert it to an iso and then copy it over
+        await run_command_async(
+            "mv",
+            temp_iso_path,
+            str(target_iso_dir / f"OPNsense-{OpnSenseConstants.CURRENT_VERSION}-serial-amd64.iso"),
+            check=True,
+        )
 
-        await on_update(17, "Repacking rootfs...")
+        self.LOGGER.info(f"Moved OPNsense ISO to {target_iso_dir}, successfully. Repacking rootfs...")
+
+        await on_update(18, "Repacking rootfs...")
         tmp_squash = Path("/tmp/pve-base.squashfs")
 
         status = await run_command_async(

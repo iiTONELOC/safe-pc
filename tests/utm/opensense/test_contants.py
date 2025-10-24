@@ -80,7 +80,7 @@ def test_releases_structure() -> None:
 def test_version_hash_regex_matches_expected() -> None:
     """VERSION_HASH regex should capture a 64-hex digest."""
     regex: re.Pattern[str] = re.compile(OpnSenseConstants.VERSION_HASH)
-    test_str: str = "SHA256 (OPNsense-25.7-dvd-amd64.iso.bz2) = " + "a" * 64
+    test_str: str = "SHA256 (OPNsense-25.7-serial-amd64.img.bz2) = " + "a" * 64
 
     m: re.Match[str] | None = regex.search(test_str)
     assert m is not None

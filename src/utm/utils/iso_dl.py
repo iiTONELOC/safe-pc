@@ -159,14 +159,17 @@ def need_to_download(iso_path: Path, expected_sha256: str) -> bool:
     """
     if not iso_path.exists():
         # if the file ends in a .bz2, check for the decompressed version too
-        if iso_path.suffix == ".bz2" and iso_path.with_suffix("").exists():
+        if iso_path.suffix == ".bz2" and (
+            iso_path.with_suffix("").exists() or iso_path.with_suffix("").with_suffix(".iso").exists()
+        ):
             LOGGER.info(f"Decompressed ISO already exists at {iso_path.with_suffix('')}, no need to download.")
             return False
         LOGGER.info(f"ISO does not exist at {iso_path}, need to download.")
         return True
 
     LOGGER.info(f"ISO already exists at {iso_path}, verifying SHA-256...")
-    hash_file = iso_path.with_suffix(".sha256")
+    hash_file = iso_path.with_name(iso_path.name + ".sha256")
+
     existing_hash = hash_file.read_text().strip() if hash_file.exists() else ""
 
     if existing_hash.lower() == expected_sha256.lower():

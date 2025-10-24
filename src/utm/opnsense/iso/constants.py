@@ -37,4 +37,4 @@ class OpnSenseConstants:
             ],
         ]
     }  # needs to be updated with each release
-    VERSION_HASH = rf"SHA256\s*\(OPNsense-{CURRENT_VERSION}-dvd-amd64\.iso\.bz2\)\s*=\s*([a-fA-F0-9]{{64}})"
+    VERSION_HASH = rf"SHA256\s*\(OPNsense-{CURRENT_VERSION}-serial-amd64\.img\.bz2\)\s*=\s*([a-fA-F0-9]{{64}})"
