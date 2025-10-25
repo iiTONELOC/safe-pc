@@ -54,7 +54,7 @@ async def handle_pasthrough_configuration(pci_nics: list[str]):
         await blacklist_host_driver_for_pci_id(pci_id)
     await load_vfio_kernel_modules()
     await bind_pci_ids_to_vfio(pci_nics)
-    await run_command_async("/usr/sbin/update-initramfs", "-u", check=False)
+    await run_command_async("update-initramfs", "-u", "-k", "all", check=False)
 
     set_env_variable("CAPSTONE_PASSTHROUGH_CONFIGURED", "1", system_wide=True)
 
@@ -203,19 +203,19 @@ async def create_new_opnsense_vm(
         logger.error(f"Failed to create and attach disk for OPNsense VM: {result.stderr}")
         return False
 
-    # attach the iso (its really an img)
+    # import the OPNsense ISO (really an IMG) as a disk
     await run_command_async(
         *[
             "qm",
             "importdisk",
             str(vm_id),
-            # path tot he iso
             f"/var/lib/vz/template/iso/OPNsense-{OpnSenseConstants.CURRENT_VERSION}-serial-amd64.iso",
             "local-zfs",
         ],
         check=False,
     )
 
+    # attach the disk, set it to boot
     result: CmdResult = await run_command_async(
         *[
             "qm",
@@ -235,21 +235,25 @@ async def create_new_opnsense_vm(
         return False
 
     # Attach first PCI NICs
-    for idx, pci_id in enumerate(filter_pci_nics(pci_nics)):
+    filtered = filter_pci_nics(pci_nics)
+    for idx, pci_id in enumerate(filtered):
+        # Drop the .function part to pass through all functions (e.g., 0000:01:00)
+        pci_base = pci_id.rsplit(".", 1)[0]
+        pci_opts = f"{pci_base},pcie=1"
+
         result: CmdResult = await run_command_async(
             *[
                 "qm",
                 "set",
                 str(vm_id),
-                f"--hostpci{idx}",
-                f"{pci_id},pcie=1",
+                f"--hostpci{idx}={pci_opts}",
             ],
             check=False,
         )
+
         if result.returncode != 0:
             logger.error(f"Failed to attach PCI NIC {pci_id}: {result.stderr}")
             return False
-
     # Enable autostart for production VM
     if is_prod:
         result: CmdResult = await run_command_async(

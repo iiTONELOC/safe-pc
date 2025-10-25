@@ -4,11 +4,94 @@ from typing import Any
 from pathlib import Path
 from logging import getLogger
 from httpx import AsyncClient
+from os import environ, write
+from re import compile as re_compile
 from collections.abc import Callable
+from logging import Logger, getLogger, INFO
 from socket import gethostname, gethostbyname
+
+import pexpect
 
 
 LOGGER = getLogger(__name__)
+
+
+class PexpectLogger:
+    def __init__(self, logger: Logger, level: int = INFO, prefix: str = ""):
+        self.logger = logger
+        self.level = level
+        self.prefix = prefix
+
+    def write(self, message: str):
+        message = message.strip()
+        if message:
+            self.logger.log(self.level, f"{self.prefix}{message}")
+
+    def flush(self):  # type: ignore - required for file-like object
+        pass
+
+
+def send_key_to_pexpect_proc(key: str, child) -> None:  # type: ignore
+    """Send a keypress to a pexpect child process.
+    Args:
+        key (str): The key to send. Supported keys: up, down, right,
+            left, tab, enter, ctrl_c, ctrl_O.
+        child: The pexpect child process.
+    """
+    keys = {
+        "up": b"\x1b[A",
+        "down": b"\x1b[B",
+        "right": b"\x1b[C",
+        "left": b"\x1b[D",
+        "tab": b"\t",
+        "enter": b"\r",
+        "ctrl_c": b"\x03",
+        "ctrl_O": b"\x0f",
+    }
+    write(child.child_fd, keys[key])  # type: ignore
+
+
+def pexpect_connect_to_serial_socket(socket_path: str, logger: Logger, prefix: str = "") -> pexpect.spawn:  # type: ignore
+    """Connect to a VM's serial socket using pexpect and socat. Returns the pexpect spawn object.
+    Args:
+        socket_path (str): The path to the VM's serial socket.
+        logger (Logger): The logger to use for logging output.
+        prefix (str): Optional prefix for log messages.
+    Returns:
+        pexpect.spawn: The pexpect spawn object connected to the serial socket.
+    """
+    environ["TERM"] = "vt100"  # set terminal type for pexpect/socat
+
+    # originally tried using qm terminal, but either pexpect or qm terminal was removing control characters
+    # decided to connect to the socket directly using socat instead, any control characters are sent using the
+    # send_key_to_pexpect_proc function above. It uses os.write to write directly to the child_fd (the unix socket),
+    # bypassing pexpect's send method and enabling the raw bytes to be sent as-is
+
+    child = pexpect.spawn(  # type: ignore
+        f"socat -,raw,echo=0 UNIX-CONNECT:{socket_path}",
+        encoding="utf-8",
+        timeout=600,
+        dimensions=(24, 80),
+    )
+
+    child.delaybeforesend = 0.1
+    child.logfile_read = PexpectLogger(logger, prefix=prefix + "[VM Output] ")
+    child.logfile_send = PexpectLogger(logger, prefix=prefix + "[VM Input] ")
+
+    return child  # type: ignore
+
+
+def strip_ansi_escape_sequences(text: str) -> str:
+    """Strip ANSI escape sequences from a given text.
+
+    Args:
+        text (str): The input text containing ANSI escape sequences.
+    Returns:
+        str: The text with ANSI escape sequences removed.
+    """
+
+    ansi_escape = re_compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+    return ansi_escape.sub("", text)
 
 
 def get_local_ip() -> str:
