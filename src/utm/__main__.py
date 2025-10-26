@@ -316,7 +316,7 @@ async def dl_opnsense_iso():
 
 async def install_pythonvenv():
     logger.info("Checking for python3-venv installation...")
-    result_check = await run_command_async("which", "python3-venv", check=False)
+    result_check = await run_command_async("which", "python3", "-m", "venv", check=False)
     if result_check.returncode == 0:
         logger.info("  python3-venv is already installed, skipping installation.")
         return

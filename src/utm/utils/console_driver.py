@@ -4,7 +4,7 @@ from utm.proxmox.vms import stop_vm, get_vm_status, get_vm_serial_socket_path, v
 
 
 class ConsoleDriver:
-    def __init__(self, vm_id: int, logger: Logger, prefix: str, stop_on_exit: bool = True) -> None:
+    def __init__(self, vm_id: int, logger: Logger, prefix: str, stop_on_exit: bool = False) -> None:
         self.vm_id = vm_id
         self.logger = logger
         self.prefix = prefix
