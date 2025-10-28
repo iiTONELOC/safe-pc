@@ -19,7 +19,7 @@ class HttpAPIRoutes:
         async def get_answer_file(job_id: str, request: Request):  # type: ignore
 
             try:
-                LOGGER.info(f"Received request for answer file of job {job_id}")
+                LOGGER.info(f"Received request for answer file from job{job_id}")
                 data = await request.json()
                 cached_manager = await CacheManager.new()
                 # grab the answer file bytes from cache - we need to modify the NIC filter line

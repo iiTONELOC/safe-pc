@@ -3,11 +3,11 @@ import os
 import asyncio
 from sys import argv
 from pathlib import Path
-from re import search, sub, M
+from re import search, sub, M, compile
 from dataclasses import dataclass
 from collections.abc import Mapping, Sequence
 from logging.handlers import RotatingFileHandler
-from logging import INFO, Logger, Formatter, StreamHandler, DEBUG, getLogger
+from logging import INFO, WARNING, Logger, Formatter, StreamHandler, DEBUG, getLogger
 
 
 logger = getLogger("safe_pc.post_startup")
@@ -174,13 +174,42 @@ class CommandError(RuntimeError):
         self.stderr = stderr
 
 
+LOG_LINE_PATTERN = compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} - \[")
+
+
+async def stream_output(
+    stream: asyncio.StreamReader,
+    lines: list[str],
+    level: int,
+    logger: Logger,
+) -> None:
+    while True:
+        line = await stream.readline()
+        if not line:
+            break
+        text = line.decode(errors="replace").rstrip()
+        lines.append(text)
+        if not text.strip():
+            continue
+
+        # Detect already-prefixed log lines and print accordingly
+        if level == INFO:
+            logger.log(level, text)
+        elif level == WARNING and LOG_LINE_PATTERN.match(text):
+            print(text, flush=True)
+        else:
+            logger.log(level, text)
+
+
 async def run_command_async(
     *args: str | Path,
     cwd: str | Path | None = None,
     env: Mapping[str, str] | None = None,
     check: bool = True,
+    logger: Logger | None = None,
 ) -> CmdResult:
     cmd = tuple(str(a) for a in args)
+
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         cwd=str(cwd) if cwd else None,
@@ -188,17 +217,26 @@ async def run_command_async(
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    try:
-        stdout_b, stderr_b = await proc.communicate()
-    except (asyncio.CancelledError, asyncio.TimeoutError):
-        proc.kill()
-        await proc.communicate()
-        raise
-    rc = proc.returncode
-    stdout = stdout_b.decode(errors="replace")
-    stderr = stderr_b.decode(errors="replace")
+
+    stdout_lines: list[str] = []
+    stderr_lines: list[str] = []
+
+    if logger is None:
+        logger = getLogger("safe_pc.run_command_async")
+        logger.propagate = False
+
+    await asyncio.gather(
+        stream_output(proc.stdout, stdout_lines, INFO, logger),  # type: ignore
+        stream_output(proc.stderr, stderr_lines, WARNING, logger),  # type: ignore
+    )
+
+    rc = await proc.wait()
+    stdout = "\n".join(stdout_lines)
+    stderr = "\n".join(stderr_lines)
+
     if check and rc != 0:
         raise CommandError(cmd, rc, stdout, stderr)
+
     return CmdResult(stdout, stderr, rc)
 
 
@@ -431,18 +469,14 @@ async def create_vm_data_pool_if_missing():
 
 async def create_opnsense_vm():
     logger.info("Creating OPNsense VM...")
-    res = await run_command_async(
+    await run_command_async(
         "venv/bin/python3",
         "src/utm/opnsense/vm_creator.py",
         cwd=CWD,
         check=False,
         env=os.environ,
+        logger=logger,
     )
-    # all output will go to stderr regardless of success or failure
-    stderr = res.stderr or ""
-
-    if stderr:
-        logger.error(f"OPNsense VM Creation Output: {stderr}")
 
 
 # group and loop

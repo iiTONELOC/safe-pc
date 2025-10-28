@@ -13,5 +13,5 @@
     "data/cached_answers"
   ],
   "ext": "js,html,css",
-  "exec": "curl -k -s --max-time 3 -X POST https://10.0.4.2:33008/trigger-reload "
+  "exec": "curl -k -s --max-time 3 -X POST https://10.0.2.2:33008/trigger-reload "
 }

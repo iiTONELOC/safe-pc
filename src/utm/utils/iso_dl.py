@@ -168,7 +168,8 @@ def need_to_download(iso_path: Path, expected_sha256: str) -> bool:
         return True
 
     LOGGER.info(f"ISO already exists at {iso_path}, verifying SHA-256...")
-    hash_file = iso_path.with_name(iso_path.name + ".sha256")
+    hash_file = iso_path.with_name(iso_path.name.replace(".iso", "") + ".sha256")
+    LOGGER.info(f"Looking for existing hash file at {hash_file}...")
 
     existing_hash = hash_file.read_text().strip() if hash_file.exists() else ""
 

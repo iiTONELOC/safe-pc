@@ -10,10 +10,18 @@ from pexpect import spawn as pe_spawn, TIMEOUT, EOF  # type: ignore
 logger = getLogger("utm.opnsense.post_install_config")
 base_prefix = "[OPNSense Post-Install Configurator] "
 
+# This is DIRTY but it works - took longer than it should to get dyanmic WAN, REFACTOR AT OWN RISK!
+# This configurator does not assume that the WAN or LAN are on a specific interface
+# The WAN is set first and assigned via DHCP. After if an address is not found then
+# Interface assignments are swapped and DHCP on WAN is reattempted, this will indefinitely loop
+# Until a WAN IP has been assigned
+# DHCP is enabled on the LAN interface with a pool from .100 to .225
+
 
 async def drive_configurator(child: pe_spawn, root_password: str = "UseBetterPassword!23") -> None:  # type: ignore
     buffer = ""
-    # configure networking
+    wan_interface = ""
+    lan_interface = ""
     configured = False
     wan_configured = False
     lan_configured = False
@@ -39,9 +47,7 @@ async def drive_configurator(child: pe_spawn, root_password: str = "UseBetterPas
                 await sleep(1)
                 buffer = ""
             elif "Available interfaces:" in screen_buffer and not wan_configured and not lan_configured:
-                # Assign WAN to em0
-                # stract the numer for the wan interface from the screen buffer
-                # 2 - WAN
+                # Assign WAN via DHCP
                 wan_number = search(r"(\d+) - WAN", screen_buffer)
                 if wan_number:
                     child.send(f"{wan_number.group(1)}\r")
@@ -56,17 +62,69 @@ async def drive_configurator(child: pe_spawn, root_password: str = "UseBetterPas
                     child.expect("Do you want to change the web GUI protocol from HTTPS to HTTP?")
                     child.send("n\r")  # dont reset GUI protocol
                     child.expect("Do you want to generate a new self-signed web GUI certificate?")
-                    child.send("n\r")  # dont regen cert
+                    child.send("n\r")  # dont regen cert∂
                     child.expect("Restore web GUI access defaults?")
                     child.send("n\r")  # dont restore defaults
-                    buffer = ""
-                    wan_configured = True
+
+                    # ------------------ Wait to see if WAN got an address -----------------
+                    # get the lan interface name, in case we need to swap them
+                    child.expect(r"LAN\s*\((\w+)\)")
+                    lan_interface = child.match.group(1)  # type: ignore
+
+                    # grab the wan interface name and its hopefully assigned ip
+                    await sleep(1)  # we have optional checks, so we need to wait or it returns early
+                    child.expect(r"WAN\s*\(([^)]+)\)\s*->(?:\s*v4(?:/DHCP4)?:\s*([\d.]+/\d+))?")
+                    wan_interface = child.match.group(1)  # type: ignore
+                    wan_ip = child.match.group(2)  # type: ignore
+
+                    if wan_ip:
+                        wan_ip = wan_ip.strip()  # type: ignore
+
+                    if wan_ip is not None and wan_ip != "":
+                        wan_configured = True
+                        logger.info(f"{base_prefix}WAN interface {wan_interface} configured with IP {wan_ip}.")
+                        buffer = ""
+                        child.send("\r")  # proceed
+                    else:
+                        # need to reconfigure wan
+                        wan_configured = False
+
+                        child.expect("Enter an option:")
+                        await sleep(1)
+                        child.send("1\r")  # Assign interfaces
+                        # expects are not working here so, swapped with sleeps and sends
+                        # child.expect("Do you want to configure LAGGs now? [y/N]")
+                        await sleep(1)
+                        child.send("\r")  # no laggs
+                        # child.expect("Do you want to configure VLANs now? [y/N]")
+                        await sleep(1)
+                        child.send("\r")  # no vlans
+                        # child.expect("Enter the WAN interface name or 'a' for auto-detection:")
+                        await sleep(1)
+                        child.send(f"{lan_interface}\r")  # wan didnt originally receive dhcp, set to lan interface
+                        # child.expect(
+                        #     "Enter the LAN interface name or 'a' for auto-detection\nNOTE: this enables full Firewalling/NAT mode."
+                        # )
+                        await sleep(1.5)
+                        child.send(f"{wan_interface}\r")  # set lan to wan interface
+                        # update variables
+                        current_wan = lan_interface  # type: ignore
+                        lan_interface = wan_interface  # type: ignore
+                        wan_interface = current_wan  # type: ignore
+                        # child.expect("Enter the Optional interface 1 name or 'a' for auto-detection:")
+                        await sleep(1)
+                        child.send("\r")  # no opt1
+                        # child.expect("Do you want to proceed? [y/N]")
+                        await sleep(1)
+                        child.send("y\r")
+                        buffer = ""
 
             elif "Available interfaces:" in screen_buffer and wan_configured and not lan_configured:
                 # Assign LAN to 10.0.30.80/24
                 lan_number = search(r"(\d+) - LAN", screen_buffer)
                 if lan_number:
                     child.send(f"{lan_number.group(1)}\r")
+                    await sleep(1)
                     child.expect("Configure IPv4 address LAN interface via DHCP?")
                     child.send("n\r")
                     child.expect("Enter the new LAN IPv4 address. Press <ENTER> for none")
@@ -89,13 +147,15 @@ async def drive_configurator(child: pe_spawn, root_password: str = "UseBetterPas
                     child.send("n\r")  # dont change gui port
                     child.expect("Do you want to generate a new self-signed web GUI certificate?")
                     child.send("n\r")  # dont change cert
-                    child.expect("Restore web GUI access defaults?")
+                    # child.expect("Restore web GUI access defaults?")
+                    await sleep(1)
                     child.send("n\r")  # dont restore defaults
-                    buffer = ""
+                    await sleep(1)
+                    child.send("\r")  # proceed
                     lan_configured = True
+                    wan_configured = True
+                    break
 
-            if wan_configured and lan_configured:
-                configured = True
         except TIMEOUT:
             continue
         except EOF:

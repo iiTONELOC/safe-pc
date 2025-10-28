@@ -2,6 +2,7 @@ import bz2
 import asyncio
 from typing import Any
 from pathlib import Path
+from time import monotonic
 from logging import getLogger
 from httpx import AsyncClient
 from os import environ, write
@@ -14,21 +15,41 @@ import pexpect
 
 
 LOGGER = getLogger(__name__)
+BUFFER = 2048
 
 
 class PexpectLogger:
-    def __init__(self, logger: Logger, level: int = INFO, prefix: str = ""):
+    def __init__(self, logger: Logger, level: int = INFO, prefix: str = "", flush_interval: float = 0.75):
         self.logger = logger
         self.level = level
         self.prefix = prefix
+        self.buffer = ""
+        self.last_flush = monotonic()
+        self.flush_interval = flush_interval
 
     def write(self, message: str):
-        message = message.strip()
-        if message:
-            self.logger.log(self.level, f"{self.prefix}{message}")
+        if not message:
+            return
+        now = monotonic()
+        message = message.replace("\r", "")
+        self.buffer += message
 
-    def flush(self):  # type: ignore - required for file-like object
-        pass
+        # Flush full lines immediately
+        while "\n" in self.buffer:
+            line, self.buffer = self.buffer.split("\n", 1)
+            if line.strip():
+                self.logger.log(self.level, f"{self.prefix}{line.rstrip()}")
+            self.last_flush = now
+
+        # Flush incomplete line if stale or too long
+        if (len(self.buffer) >= BUFFER or now - self.last_flush > self.flush_interval) and self.buffer.strip():
+            self.logger.log(self.level, f"{self.prefix}{self.buffer.rstrip()}")
+            self.buffer = ""
+            self.last_flush = now
+
+    def flush(self):
+        # Do nothing — pexpect flushes after each byte
+        return
 
 
 def send_key_to_pexpect_proc(key: str, child) -> None:  # type: ignore

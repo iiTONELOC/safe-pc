@@ -1,7 +1,9 @@
 from os import environ
+from asyncio import sleep
 from logging import getLogger
 
 from utm.opnsense.iso.constants import OpnSenseConstants
+from utm.opnsense.installer import runner as install_opnsense
 from utm.proxmox.iommu import configure_for_pci_passthrough
 from utm.utils.utils import handle_keyboard_interrupt
 from utm.__main__ import (
@@ -11,6 +13,7 @@ from utm.__main__ import (
     set_env_variable,
     run_command_async,
 )
+from utm.proxmox.vms import start_vm
 from utm.proxmox.system import (
     get_cpu_cores,
     find_pci_nics,
@@ -22,6 +25,7 @@ from utm.proxmox.system import (
 )
 
 existing_num = 0
+need_to_config = True
 logger = getLogger("utm.opnsense.vm_creator")
 
 
@@ -265,6 +269,7 @@ async def create_new_opnsense_vm(
                 "order=1,up=10,down=10",
             ],
             check=False,
+            logger=logger,
         )
         if result.returncode != 0:
             logger.warning(f"Failed to enable autostart for {fw_name}: {result.stderr}")
@@ -282,6 +287,8 @@ async def create_opnsense_vm():
 
     if is_prod and prod_exists:
         logger.info("Production firewall VM already exists. Skipping creation.")
+        global need_to_config
+        need_to_config = False
         return True
 
     logger.info(f"Creating OPNsense VM: {fw_name}")
@@ -331,14 +338,22 @@ async def create_opnsense_vm():
 
 
 async def run():
-    setup_logging()
+    vm_id = "100"
     await create_opnsense_vm()
+    global need_to_config
+    if need_to_config:
+        await sleep(5)  # wait a bit before starting install
+        await install_opnsense(vm_id)
+    else:
+        logger.info("Starting Safe Sense Firewall VM.")
+        await start_vm(vm_id)
 
 
 @handle_keyboard_interrupt
 def main():
     import asyncio
 
+    setup_logging()
     asyncio.run(run())
 
 

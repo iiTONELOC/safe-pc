@@ -31,6 +31,8 @@ async def _set_correct_boot_remove_iso(vm_id: str) -> None:
     logger.info(f"{base_prefix}Removing installation ISO from VM ID {vm_id}.")
     await run_command_async(*["qm", "set", vm_id, "--scsi1", "none"], check=True)
 
+    return None
+
 
 async def install_opnsense(vm_id: str, root_password: str = DEFAULT_ROOT_PASSWORD) -> bool:
     try:
@@ -43,6 +45,8 @@ async def install_opnsense(vm_id: str, root_password: str = DEFAULT_ROOT_PASSWOR
     except Exception as e:
         logger.error(f"{base_prefix}Error during installation: {e}")
         return False
+
+    return False
 
 
 async def post_install_config(vm_id: str, root_password: str = DEFAULT_ROOT_PASSWORD) -> bool:
@@ -67,7 +71,7 @@ async def post_install_config(vm_id: str, root_password: str = DEFAULT_ROOT_PASS
     return False
 
 
-async def main(vm_id: str, root_password: str = DEFAULT_ROOT_PASSWORD) -> None:
+async def runner(vm_id: str, root_password: str = DEFAULT_ROOT_PASSWORD) -> None:
     steps = [
         ("Installing OPNsense", install_opnsense),
         ("Post-install configuration", post_install_config),
@@ -86,10 +90,14 @@ async def main(vm_id: str, root_password: str = DEFAULT_ROOT_PASSWORD) -> None:
         logger.info(f"{base_prefix}Completed step: {step_name}")
 
 
-if __name__ == "__main__":
+def main():
     from asyncio import run
     from os import environ
 
     setup_logging()
     # DO NOT USE THE DEFAULT ROOT PASSWORD IN PRODUCTION ENVIRONMENTS
-    run(main("100", environ.get("SAFE_SENSE_PWD", None) or DEFAULT_ROOT_PASSWORD))
+    run(runner("100", environ.get("SAFE_SENSE_PWD", None) or DEFAULT_ROOT_PASSWORD))
+
+
+if __name__ == "__main__":
+    main()
