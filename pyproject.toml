@@ -42,7 +42,7 @@ build-backend = "poetry.core.masonry.api"
 dev = "proxmox_auto_installer.scripts.run_dev:main"
 start = "proxmox_auto_installer.back_end.server:main"
 extract-iso = "proxmox_auto_installer.iso.tools:main"
-"dl-opnsense-iso" = "utm.opnsense.opnsense:main"
+"dl-opnsense-iso" = "utm.opnsense.installer:main"
 
 [dependency-groups]
 dev = [

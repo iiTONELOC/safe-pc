@@ -26,5 +26,5 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poetry.scripts]
-"dl-opnsense-iso" = "utm.opnsense.opnsense:main"
+"dl-opnsense-iso" = "utm.opnsense.installer:main"
 "create-opnsense-vm" = "utm.opnsense.vm_creator:main"

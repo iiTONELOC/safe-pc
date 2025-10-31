@@ -346,7 +346,7 @@ def set_production_env():
 async def dl_opnsense_iso():
     await run_command_async(
         "venv/bin/python3",
-        "src/utm/opnsense/opnsense.py",
+        "src/utm/opnsense/installer.py",
         cwd=CWD,
         env=os.environ,
     )
