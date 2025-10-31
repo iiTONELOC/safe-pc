@@ -11,6 +11,7 @@ from proxmox_auto_installer.back_end.iso_jobs import Job, below_max_jobs
 from proxmox_auto_installer.answer_file.cached_answers import CacheManager
 from proxmox_auto_installer.utils.country_codes import ProxmoxCountryCodeHelper
 from proxmox_auto_installer.back_end.iso_jobs import get_job, send_socket_update
+from proxmox_auto_installer.answer_file.cached_answers import CacheManager
 from proxmox_auto_installer.answer_file.answer_file import (
     ProxmoxAnswerFile,
     create_answer_file_from_dict,
@@ -83,9 +84,70 @@ class HttpsRoutes:
 
             return response
 
+        # history
+        @app.get(path="/history", response_class=HTMLResponse)
+        async def history_page(request: Request):  # type: ignore
+            # generate a new jwt for the session if needed
+            cached_manager = await CacheManager.new()
+            job_ids = await cached_manager.get_cached_job_ids()
+            response = templates.TemplateResponse(
+                name="/pages/history.html",
+                context={
+                    "request": request,
+                    "job_ids": job_ids,
+                    "start_year": HttpsRoutes.START_YEAR,
+                    "current_year": HttpsRoutes.CURRENT_YEAR,
+                },
+            )
+
+            return response
+
+        # history-detail
+        @app.get(path="/history/{job_id}", response_class=HTMLResponse)
+        async def history_detail_page(request: Request, job_id: str):  # type:ignore
+            # generate a new jwt for the session if needed
+
+            cached_manager = await CacheManager.new()
+            ans_path = cached_manager.get_answer_path(job_id=job_id)
+            if not ans_path:
+                return templates.TemplateResponse(
+                    name="/pages/404.html",
+                    context={
+                        "request": request,
+                        "start_year": HttpsRoutes.START_YEAR,
+                        "current_year": HttpsRoutes.CURRENT_YEAR,
+                    },
+                    status_code=404,
+                )
+
+            response = templates.TemplateResponse(
+                name="/pages/history-detail.html",
+                context={
+                    "request": request,
+                    "start_year": HttpsRoutes.START_YEAR,
+                    "current_year": HttpsRoutes.CURRENT_YEAR,
+                    "job_id": job_id,
+                },
+            )
+
+            return response
+
         @app.get(path="/iso-download/{job_id}", response_class=HTMLResponse)
         async def iso_download_page(request: Request, job_id: str):  # type: ignore
             # generate a new jwt for the session if needed
+
+            cached_manager = await CacheManager.new()
+            iso_path = cached_manager.get_iso_path(job_id=job_id)
+            if not iso_path:
+                return templates.TemplateResponse(
+                    name="/pages/404.html",
+                    context={
+                        "request": request,
+                        "start_year": HttpsRoutes.START_YEAR,
+                        "current_year": HttpsRoutes.CURRENT_YEAR,
+                    },
+                    status_code=404,
+                )
 
             response = templates.TemplateResponse(
                 name="/pages/iso-download.html",
@@ -102,6 +164,19 @@ class HttpsRoutes:
         # Development mode features - hot-reloading, etc.
 
         DevHelpers.handle_dev_hot_reload(app=app, templates=templates)  # type: ignore
+
+        # answer-file dl page
+        @app.get(path="/api/answer-file/{job_id}", response_class=FileResponse)
+        async def answer_file_page(request: Request, job_id: str):  # type: ignore
+            cached_manager = await CacheManager.new()
+            answer_path = cached_manager.get_answer_path(job_id=job_id)
+            if not answer_path:
+                return JSONResponse(content={"error": "Answer file not found."}, status_code=404)
+            return FileResponse(
+                path=answer_path,
+                filename=f"{job_id}-answer_file.toml",
+                media_type="text/plain",
+            )
 
         @app.get(path="/api/installer/data", response_class=JSONResponse)
         def get_installer_data_route() -> dict[str, dict[str, Any]]:  # type: ignore
@@ -162,26 +237,34 @@ class HttpsRoutes:
         # iso-download route
         @app.get(path="/api/iso-download/{job_id}")
         async def iso_download_route(request: Request, job_id: str):  # type: ignore
+            LOGGER.info(f"Received ISO download request for job ID: {job_id}")
             try:
                 cache = await CacheManager.new()
                 iso_path = cache.get_iso_path(job_id)
+                short_id = job_id.split("-")[-1][:8]  # last chunk, first 8 chars
+                filename = f"SAFE-PC-{short_id}.iso"
                 if not iso_path:
                     raise FileNotFoundError("ISO not found for the given job ID.")
                 return FileResponse(
                     path=iso_path,
-                    filename=f"proxmox-ve-custom-{job_id}.iso",
+                    filename=filename,
                     media_type="application/octet-stream",
                 )
             except Exception as _:
                 LOGGER.error(f"Error processing ISO download request: {_}")
                 return JSONResponse(content={"error": f"Internal Server Error: {_}"}, status_code=500)
 
-        @app.get(path="/api/delete-iso/{job_id}")
+        # delete-iso route
+        @app.delete(path="/api/delete-iso/{job_id}")
         async def delete_iso_route(request: Request, job_id: str):  # type: ignore
             try:
+                LOGGER.info(f"Received request to delete ISO and answer file for job ID: {job_id}")
                 cache = await CacheManager.new()
+                await cache.delete_answer(job_id)
+                LOGGER.info(f"Deleted answer file for job ID: {job_id}")
                 await cache.delete_iso(job_id, remove_file=True)
-                return JSONResponse(content={"status": "ISO deleted successfully."}, status_code=200)
+                LOGGER.info(f"Deleted ISO for job ID: {job_id}")
+                return JSONResponse(content={"status": "ISO and answer file deleted successfully."}, status_code=200)
             except Exception as _:
                 LOGGER.error(f"Error processing ISO delete request: {_}")
                 return JSONResponse(content={"error": f"Internal Server Error: {_}"}, status_code=500)
@@ -221,3 +304,15 @@ class HttpsRoutes:
             except WebSocketDisconnect:
                 LOGGER.info(f"WebSocket disconnected for job {job_id}")
                 await job.detach_socket()
+
+        @app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+        async def catch_all(request: Request, full_path: str):  # type: ignore
+            return templates.TemplateResponse(
+                "pages/404.html",
+                {
+                    "request": request,
+                    "start_year": HttpsRoutes.START_YEAR,
+                    "current_year": HttpsRoutes.CURRENT_YEAR,
+                },
+                status_code=404,
+            )

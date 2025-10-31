@@ -1,36 +1,62 @@
-{% extends "layouts/main.html" %} {% block title %}Downloader | Safe-PC Maker{%
+{% extends "layouts/main.html" %} {% block title %}ISO Ready | Safe-PC Maker{%
 endblock %} {% block content %}
 <div
-  class="flex flex-col items-center justify-center min-h-[calc(100vh_-_var(--header-height)_-_58px)] z-10"
+  class="flex justify-center items-center min-h-[calc(100vh_-_var(--header-height)_-_58px)] px-4"
 >
+  <div
+    class="w-full max-w-xl bg-gradient-to-br from-slate-900/60 via-slate-950/50 to-black/60 rounded-3xl border border-sky-400/40 shadow-[0_0_40px_rgba(34,211,238,0.25)] hover:shadow-[0_0_60px_rgba(34,211,238,0.5)] transition-all duration-300 p-10 text-center"
+  >
+    <div class="flex justify-center mb-6">
+      <div
+        class="w-16 h-16 flex items-center justify-center rounded-full bg-green-600/80 text-white text-3xl shadow-lg"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-check-icon lucide-check"
+        >
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      </div>
+    </div>
 
+    <h1 class="text-3xl font-semibold text-sky-200 mb-2">Proxmox ISO Ready</h1>
 
-  <div class="bg-gradient-to-br from-[#0d14289b] to-[#0b102065]
-              rounded-2xl shadow-[0_0_25px_rgba(0,150,255,0.2)]
-              hover:shadow-[0_0_40px_rgba(0,150,255,0.4)]
-              transition-all duration-300 transform
-              text-center px-20 py-16">
+    <p class="text-sky-400 text-sm mb-8 font-mono opacity-80 break-all">
+      SAFE-PC-{{ job_id }}.iso
+    </p>
 
-    <h1 class="text-2xl font-semibold text-[#aee4ff] mb-8 drop-shadow-[0_0_10px_rgba(0,150,255,0.5)]">
-      Proxmox VE Ready
-    </h1>
-
-    <a id="download-iso-btn" href="/api/iso-download/{{job_id}}" download class="bg-gradient-to-br from-[#007bff] to-[#004b9b]
-                   text-whgray-300te font-semibold text-lg
-                   px-8 py-3 rounded-full
-                   shadow-[0_0_15px_rgba(0,150,255,0.5)]
-                   hover:shadow-[0_0_25px_rgba(0,150,255,0.8)]
-                   hover:scale-105 transition-all duration-300">
-      Download
+    <a
+      href="/api/iso-download/{{job_id}}"
+      download
+      class="block w-full text-center bg-sky-600 hover:bg-sky-500 text-white font-semibold py-3 rounded-xl shadow-[0_0_25px_rgba(14,165,233,0.6)] hover:shadow-[0_0_40px_rgba(14,165,233,0.9)] transition-all duration-300 mb-6"
+    >
+      Download ISO
     </a>
 
+    <div class="flex flex-col gap-2">
+      <a
+        href="/"
+        target="_blank"
+        class="text-sky-400 text-sm hover:text-sky-300 underline"
+      >
+        Create Another ISO
+      </a>
+      <a
+        href="/history"
+        target="_blank"
+        class="text-sky-400 text-sm hover:text-sky-300 underline"
+      >
+        View Saved Installers
+      </a>
+    </div>
   </div>
-
-
-
-
-
 </div>
-{% endblock %} {% block footer_scripts %}
-
 {% endblock %}

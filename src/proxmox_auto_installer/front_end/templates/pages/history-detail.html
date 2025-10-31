@@ -1,0 +1,106 @@
+{% extends "layouts/main.html" %} {% block title %}ISO {{ job_id }} | Safe-PC
+Maker{% endblock %} {% block content %}
+<div
+  class="flex flex-col items-center justify-center min-h-[calc(100vh_-_var(--header-height)_-_58px)] px-6 py-10 gap-8"
+>
+  <article
+    class="bg-gradient-to-br from-slate-900/70 to-slate-800/40 border border-sky-400/30 rounded-2xl p-10 w-full max-w-2xl shadow-[0_0_30px_rgba(34,212,238,0.25)] backdrop-blur-sm text-center"
+  >
+    <h2 class="text-3xl font-semibold text-sky-300 drop-shadow mb-4">
+      ISO Build Details
+    </h2>
+
+    <p class="text-sky-400 text-xs tracking-wide mb-6">
+      Job ID:
+      <span class="font-mono text-sky-200 text-sm">{{ job_id }}</span>
+    </p>
+
+    <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+      <a
+        href="/api/iso-download/{{ job_id }}"
+        download
+        class="px-8 py-3 rounded-xl font-semibold text-white bg-gradient-to-br from-sky-600 to-sky-900 shadow hover:shadow-lg hover:scale-105 transition-all duration-300"
+      >
+        Download ISO
+      </a>
+
+      <button
+        id="load-answer-btn"
+        data-job-id="{{ job_id }}"
+        class="px-8 py-3 rounded-xl font-semibold text-sky-300 bg-slate-800/60 border border-sky-700 hover:border-sky-400 hover:text-sky-200 transition-all duration-300"
+      >
+        View Answer File
+      </button>
+    </div>
+
+    <pre
+      id="answer-file"
+      class="hidden mt-6 p-4 w-full bg-black/60 text-sky-300 rounded-lg text-left overflow-x-auto border border-slate-700 shadow-inner text-sm leading-relaxed"
+    ></pre>
+
+    <div class="flex flex-col items-center gap-3 mt-4 w-full">
+      <button
+        id="download-answer-btn"
+        class="hidden px-6 py-2 rounded-lg font-medium bg-sky-700/80 text-white hover:bg-sky-600 shadow transition-all duration-300 w-full sm:w-auto"
+      >
+        Download Answer File
+      </button>
+
+      <button
+        id="delete-job-btn"
+        data-job-id="{{ job_id }}"
+        class="mt-2 px-6 py-2 rounded-lg font-medium bg-red-700/80 text-white hover:bg-red-600 shadow transition-all duration-300 w-full sm:w-auto"
+      >
+        Delete This Entry
+      </button>
+
+      <a
+        href="/history"
+        class="text-sky-400 hover:text-sky-200 text-sm underline"
+      >
+        Back to Saved Installers
+      </a>
+    </div>
+  </article>
+
+  <!-- Delete Confirm Modal -->
+  <div
+    id="delete-confirm-modal"
+    class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200]"
+  >
+    <div
+      class="bg-slate-900/90 border border-sky-500/40 rounded-xl p-8 w-full max-w-md shadow-xl text-center"
+    >
+      <h3 class="text-xl font-semibold text-red-400 mb-4">
+        Delete This Installer?
+      </h3>
+      <p class="text-sky-300 text-sm mb-6">
+        This will irreversibly remove the installer! Are you sure you want to
+        proceed?
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <button
+          id="cancel-delete-btn"
+          class="px-6 py-2 rounded-lg bg-slate-700 text-sky-300 hover:bg-slate-600 border border-slate-600 transition"
+        >
+          Cancel
+        </button>
+
+        <button
+          id="confirm-delete-btn"
+          class="px-6 py-2 rounded-lg bg-red-700 text-white hover:bg-red-600 transition"
+          data-job-id="{{ job_id }}"
+        >
+          Yes, Delete It
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block footer_scripts %}
+<script
+  src="{{ url_for('static', path='/js/history-detail.js') }}"
+  type="module"
+></script>
+{% endblock %}

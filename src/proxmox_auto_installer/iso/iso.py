@@ -1,3 +1,4 @@
+import subprocess
 import tempfile
 from uuid import uuid4
 from typing import Any
@@ -429,6 +430,22 @@ WantedBy=multi-user.target
         )
         self.modified_iso_path = dst
         return dst
+
+    def cleanup_job_folder(self):
+        """Cleans up the job folder used for modifications."""
+
+        if self.work_dir.exists():
+            try:
+                # ensure we own everything
+                subprocess.run(["/bin/chown", "-R", "dev:dev", str(self.work_dir)], check=False)
+                # ensure write perms so rm won't choke
+                subprocess.run(["/bin/chmod", "-R", "u+rwx", str(self.work_dir)], check=False)
+
+                # now delete the folder
+                subprocess.run(["/bin/rm", "-rf", str(self.work_dir)], check=True)
+                self.LOGGER.info(f"Cleaned up job folder at {self.work_dir}")
+            except Exception as e:
+                self.LOGGER.error(f"Failed to delete job folder {self.work_dir}: {e}")
 
 
 async def run():

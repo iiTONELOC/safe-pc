@@ -1,14 +1,18 @@
 {% extends "layouts/main.html" %} {% block title %}Installer | Safe-PC Maker{%
 endblock %} {% block content %}
 <div
-  class="flex flex-col items-center justify-center min-h-[calc(100vh_-_var(--header-height)_-_58px)] z-10"
+  class="flex flex-col md:flex-row p-4 md:p-1 justify-center items-center gap-10 sm:gap-20 md:gap-50 lg:gap-60 min-h-[calc(100vh_-_var(--header-height)_-_58px)]"
 >
-  {% include "partials/buttons/create-iso.html" %} {% include
-  "partials/modals/create-iso.html" %}
+  {% with title="Create Installer", action="create" %} {% include
+  "partials/components/iso-card.html" %} {% endwith %} {% with title="Saved
+  Installers", action="history" %} {% include
+  "partials/components/iso-card.html" %} {% endwith %} {%include
+  "partials/modals/create-iso.html"%}
 </div>
+
 {% endblock %} {% block footer_scripts %}
 <script
-  src="{{url_for('static', path='/js/prox-iso-installer/index.js')}}"
+  src="{{ url_for('static', path='/js/prox-iso-installer/index.js') }}"
   type="module"
 ></script>
 {% endblock %}

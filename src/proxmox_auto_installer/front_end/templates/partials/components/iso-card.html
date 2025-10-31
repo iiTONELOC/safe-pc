@@ -1,0 +1,74 @@
+{% if action == "history" %}
+<a
+  href="/history"
+  data-action="{{ action }}"
+  class="iso-card group cursor-pointer hover:scale-105 flex flex-col items-center justify-between w-full max-w-[26rem] min-h-[26rem] p-8 bg-gradient-to-br from-slate-900/60 via-slate-950/50 to-black/60 border border-sky-400/40 hover:bg-slate-700/30 hover:bg-sky-700/40 rounded-3xl shadow-[0_0_40px_rgba(34,211,238,0.25)] hover:shadow-[0_0_60px_rgba(34,211,238,0.7)] active:shadow-[0_0_60px_rgba(34,211,238,0.7)] transition-all duration-300"
+>
+{% else %}
+<button
+  type="button"
+  id="create-iso-btn"
+  data-action="{{ action }}"
+  class="iso-card group cursor-pointer hover:scale-105 flex flex-col items-center justify-between w-full max-w-[26rem] min-h-[26rem] p-8 bg-gradient-to-br from-slate-900/60 via-slate-950/50 to-black/60 border border-sky-400/40 hover:bg-slate-700/30 hover:bg-sky-700/40 rounded-3xl shadow-[0_0_40px_rgba(34,211,238,0.25)] hover:shadow-[0_0_60px_rgba(34,211,238,0.7)] active:shadow-[0_0_60px_rgba(34,211,238,0.7)] transition-all duration-300"
+>
+{% endif %}
+
+<h2 class="text-2xl md:text-4xl text-sky-100 font-semibold group-hover:text-sky-300">
+  {{ title }}
+</h2>
+
+<div class="flex items-center justify-center">
+
+  {% if action == "history" %}
+<div class="relative group w-32 h-24 min-w-auto">
+
+    <!-- Back -->
+  <div class="absolute inset-0 z-10 bg-sky-900/60 border border-sky-700 rounded-lg shadow-lg
+      transition-transform duration-300 will-change-transform
+      group-hover:-translate-y-12">
+      <div class="absolute top-0 left-0 w-14 h-4 bg-sky-900/80 border-b border-sky-700 rounded-t-md"></div>
+    </div>
+
+    <!-- Middle -->
+    <div class="absolute inset-0 z-20 bg-sky-800/70 border border-sky-600 rounded-lg shadow-lg
+      transition-transform duration-300 will-change-transform
+      group-hover:-translate-y-6">
+      <div class="absolute top-0 left-0 w-14 h-4 bg-sky-800/80 border-b border-sky-600 rounded-t-md"></div>
+    </div>
+
+    <!-- Front -->
+    <div class="absolute inset-0 z-30 bg-sky-700/80 border border-sky-500 rounded-lg shadow-lg
+      transition-transform duration-300">
+      <div class="absolute top-0 left-0 w-14 h-4 bg-sky-700/90 border-b border-sky-500 rounded-t-md"></div>
+    </div>
+
+  </div>
+
+
+  {% else %}
+  <!-- CD icon -->
+  <div
+    class="w-32 h-32 bg-gradient-to-br from-slate-700/70 to-slate-800/70 rounded-full border-4 border-sky-700 shadow-inner flex items-center justify-center group-hover:border-sky-300 group-hover:shadow-[0_0_30px_rgba(34,211,238,0.6)] group-hover:rotate-180 transition-all duration-500"
+  >
+    <div
+      class="w-8 h-8 bg-sky-700 rounded-full border-2 border-slate-500/70 group-hover:bg-sky-400 transition-colors duration-500"
+    ></div>
+  </div>
+  {% endif %}
+
+</div>
+
+{% if action != "history"%}
+<span
+  class="w-36 h-6 bg-slate-700/60 rounded-lg shadow-inner group-hover:bg-sky-500/40 group-hover:shadow-[0_0_25px_rgba(14,165,233,0.7)] transition-all duration-500"
+></span>
+{%else%}
+<span
+  class="w-36 h-6" ></span>
+{% endif %}
+
+{% if action == "history" %}
+</a>
+{% else %}
+</button>
+{% endif %}

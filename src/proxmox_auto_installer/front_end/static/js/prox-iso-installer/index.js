@@ -48,6 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     submitBtn,
     emailInput,
     emailError,
+    spinnerBar,
     createIsoBtn,
     sourceSelect,
     gatewayError,
@@ -57,6 +58,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     keyboardSelect,
     timezoneSelect,
     loadingSpinner,
+    spinnerStatus,
+    spinnerBarFill,
+    spinnerComplete,
+    spinnerProgress,
+    spinnerMessage,
     passwordConfirmInput,
     passwordConfirmError,
   } = formElements();
@@ -136,7 +142,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-
   // handle changes for the keyboard, country, and timezone selects
   [keyboardSelect, countrySelect, timezoneSelect].forEach((select) => {
     select.addEventListener("change", () => {
@@ -208,6 +213,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // disable the submit button to prevent multiple clicks
     disableSubmitButton(submitBtn);
+
+    // Reset spinner UI before new job
+    spinnerBar.classList.add("hidden");
+    spinnerBarFill.style.width = "0%";
+    spinnerComplete.classList.add("hidden");
+    spinnerProgress.textContent = "";
+    spinnerMessage.textContent = "";
+    spinnerStatus.textContent = "Processing...";
+
     // display loading spinner
     show(loadingSpinner);
     //ensure the country is lowercase

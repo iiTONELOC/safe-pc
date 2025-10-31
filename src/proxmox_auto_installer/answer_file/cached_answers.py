@@ -143,3 +143,8 @@ class CacheManager:
             p = Path(path)
             if p.exists():
                 await asyncio.to_thread(p.unlink)
+
+    async def get_cached_job_ids(self) -> list[str]:
+        """Return a list of all job IDs currently cached."""
+        async with self._lock:
+            return list(self._manifest["answers"].keys())

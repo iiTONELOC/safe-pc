@@ -5,10 +5,12 @@ export async function createIso(
   closeBtn,
   hide
 ) {
-  const [{ showAlert }, { handleCreateIso }] = await Promise.all([
-    import("../utils/alert.js"),
-    import("../api.js"),
-  ]);
+  const [{ showAlert }, { handleCreateIso }, { capitalizeWords }] =
+    await Promise.all([
+      import("../utils/alert.js"),
+      import("../api.js"),
+      import("./helpers.js"),
+    ]);
 
   const spinnerStatus = document.getElementById("spinner-status");
   const spinnerProgress = document.getElementById("spinner-progress");
@@ -25,14 +27,32 @@ export async function createIso(
       switch (data.type) {
         case "progress": {
           const progress = data.progress ?? 0;
-          spinnerProgress.textContent = `Progress: ${progress}%`;
 
-          if (data.status) {
-            spinnerStatus.textContent = `Status: ${data.status}`;
+          // Text update
+          spinnerProgress.textContent = `${progress}%`;
+
+          // Bar elements
+          const bar = document.getElementById("spinner-bar");
+          const fill = document.getElementById("spinner-bar-fill");
+          const completeIcon = document.getElementById("spinner-complete");
+
+          if (bar && fill) {
+            bar.classList.remove("hidden");
+            fill.style.width = `${progress}%`;
           }
-          if (data.message) {
-            spinnerMessage.textContent = data.message;
+
+          if (data.status)
+            spinnerStatus.textContent = capitalizeWords(data.status);
+          if (data.message) spinnerMessage.textContent = data.message;
+
+          // If done, show checkmark - not quite finished
+          // process is over when socket closes
+          if (progress >= 100) {
+            setTimeout(() => {
+              completeIcon.classList.remove("hidden");
+            }, 300);
           }
+
           break;
         }
 
@@ -65,18 +85,19 @@ export async function createIso(
       console.log(
         `WebSocket closed cleanly, code=${event.code} reason=${event.reason}`
       );
-
     } else {
       console.warn("WebSocket closed unexpectedly");
     }
 
     spinnerMessage.textContent = "ISO creation process has finished.";
+
     setTimeout(() => {
       hide(loadingSpinner);
       submitBtn.disabled = false;
       closeBtn.click();
+      // Redirect to download page
       window.location.href = `iso-download/${jobId}`;
-    }, 1500);
+    }, 250);
   };
 
   /**
@@ -107,7 +128,7 @@ export async function createIso(
     };
 
     socket.onmessage = handleSocketMessage;
-    socket.onclose = (event)=>handleSocketClose(event, jobId);
+    socket.onclose = (event) => handleSocketClose(event, jobId);
     socket.onerror = handleSocketError;
   };
 
@@ -115,21 +136,18 @@ export async function createIso(
   try {
     const result = await handleCreateIso(formState);
     // register the custom event listener for when the ISO creation finishes
-  
 
-       const { jobId } = result;
+    const { jobId } = result;
     if (!result?.status) {
       showAlert(result.error || "Error creating ISO");
       setTimeout(() => {
         hide(loadingSpinner);
         submitBtn.disabled = false;
         closeBtn.click();
-          window.location.href = `iso-download/${jobId}`;
+        window.location.href = `iso-download/${jobId}`;
       }, 6800);
       return;
     }
-
- 
 
     openSocket(jobId);
   } catch (error) {

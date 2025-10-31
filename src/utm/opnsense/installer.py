@@ -32,6 +32,10 @@ async def _set_correct_boot_remove_iso(vm_id: str) -> None:
     logger.info(f"{base_prefix}Removing installation ISO from VM ID {vm_id}.")
     await run_command_async(*["qm", "set", vm_id, "--scsi1", "none"], check=True)
 
+    # ensure the vm is set to boot when proxmox starts
+    logger.info(f"{base_prefix}Enabling boot on startup for VM ID {vm_id}.")
+    await run_command_async(*["qm", "set", vm_id, "--onboot", "1"], check=True)
+
     return None
 
 

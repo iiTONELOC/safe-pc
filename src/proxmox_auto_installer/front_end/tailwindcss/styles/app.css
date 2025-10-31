@@ -10,13 +10,23 @@
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-background-color: #0ea5e9;
+  background-color: #0ea5e9;
   border-radius: 4px;
 }
 *::-webkit-scrollbar-thumb:hover {
-background-color: #38bdf8;
+  background-color: #38bdf8;
 }
 *::-webkit-scrollbar-track {
-background-color: #111827;
+  background-color: #111827;
 }
 
+@keyframes pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

@@ -119,17 +119,42 @@ const elementMap = () => [
     element: document.getElementById("source"),
   },
   {
-    id: "spinner-text",
-    varName: "spinnerText",
-    element: document.getElementById("spinner-text"),
+    id: "spinner-status",
+    varName: "spinnerStatus",
+    element: document.getElementById("spinner-status"),
+  },
+  {
+    id: "spinner-progress",
+    varName: "spinnerProgress",
+    element: document.getElementById("spinner-progress"),
+  },
+  {
+    id: "spinner-message",
+    varName: "spinnerMessage",
+    element: document.getElementById("spinner-message"),
+  },
+  {
+    id: "spinner-bar",
+    varName: "spinnerBar",
+    element: document.getElementById("spinner-bar"),
+  },
+  {
+    id: "spinner-bar-fill",
+    varName: "spinnerBarFill",
+    element: document.getElementById("spinner-bar-fill"),
+  },
+  {
+    id: "spinner-complete",
+    varName: "spinnerComplete",
+    element: document.getElementById("spinner-complete"),
   },
 ];
 
 const formElements = () => {
   const formElements = {};
-  elementMap().forEach(({ varName, element }) => {
+  for (const { varName, element } of elementMap()) {
     formElements[varName] = element;
-  });
+  }
 
   return formElements;
 };

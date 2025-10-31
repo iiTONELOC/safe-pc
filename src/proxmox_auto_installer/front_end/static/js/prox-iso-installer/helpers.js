@@ -3,7 +3,7 @@ export const populateCountrySelect = (
   selectElement,
   currentCountry
 ) => {
-  Object.entries(countries).forEach(([code, name]) => {
+  for (const [code, name] of Object.entries(countries)) {
     const option = document.createElement("option");
     option.value = name;
     option.textContent = code;
@@ -11,11 +11,11 @@ export const populateCountrySelect = (
       option.selected = true;
     }
     selectElement.appendChild(option);
-  });
+  }
 };
 
 export const populateKeyboardSelect = (keyboards, selectElement) => {
-  keyboards.forEach((keyboard) => {
+  for (const keyboard of keyboards) {
     const option = document.createElement("option");
     option.value = keyboard;
     option.textContent = keyboard.toUpperCase();
@@ -26,11 +26,11 @@ export const populateKeyboardSelect = (keyboards, selectElement) => {
     if (normalizedKeyboard === normalizedNavigatorLang) {
       option.selected = true;
     }
-  });
+  }
 };
 
 export const populateTzSelect = (timezones, selectElement, currentTimezone) => {
-  timezones.forEach((tz) => {
+  for (const tz of timezones) {
     const option = document.createElement("option");
     option.value = tz;
     option.textContent = tz;
@@ -38,5 +38,14 @@ export const populateTzSelect = (timezones, selectElement, currentTimezone) => {
       option.selected = true;
     }
     selectElement.appendChild(option);
-  });
+  }
+};
+
+export const capitalizeWords = (str) => {
+  if (typeof str !== "string") return "";
+  return str
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 };

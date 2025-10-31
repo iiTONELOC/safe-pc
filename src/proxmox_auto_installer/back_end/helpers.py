@@ -24,7 +24,7 @@ class DevHelpers:
     reload_clients: set[WebSocket] = set()
 
     @staticmethod
-    def handle_dev_hot_reload(app: FastAPI, templates=Jinja2Templates): # type: ignore
+    def handle_dev_hot_reload(app: FastAPI, templates=Jinja2Templates):  # type: ignore
         """
         Sets up development hot-reload functionality for a FastAPI application.
         This function modifies the provided Jinja2Templates instance to indicate development mode,
@@ -47,10 +47,8 @@ class DevHelpers:
 
         templates.env.globals["DEV"] = True  # type: ignore
 
-        @app.websocket(
-            "/reload-ws", name="WebSocket for hot-reloading in development mode"
-        )
-        async def reload_ws(ws: WebSocket): # type: ignore
+        @app.websocket("/reload-ws", name="WebSocket for hot-reloading in development mode")
+        async def reload_ws(ws: WebSocket):  # type: ignore
             await ws.accept()
             DevHelpers.reload_clients.add(ws)
             try:
@@ -62,6 +60,6 @@ class DevHelpers:
                 DevHelpers.reload_clients.remove(ws)
 
         @app.post("/trigger-reload")
-        async def trigger_reload_endpoint(): # type: ignore
+        async def trigger_reload_endpoint():  # type: ignore
             await _trigger_reload(DevHelpers.reload_clients)
             return Response(content="Reload triggered", media_type="text/plain")

@@ -62,7 +62,7 @@ async def drive_configurator(child: pe_spawn, root_password: str = "UseBetterPas
                     child.expect("Do you want to change the web GUI protocol from HTTPS to HTTP?")
                     child.send("n\r")  # dont reset GUI protocol
                     child.expect("Do you want to generate a new self-signed web GUI certificate?")
-                    child.send("n\r")  # dont regen cert∂
+                    child.send("n\r")  # dont regen cert
                     child.expect("Restore web GUI access defaults?")
                     child.send("n\r")  # dont restore defaults
 
@@ -120,7 +120,7 @@ async def drive_configurator(child: pe_spawn, root_password: str = "UseBetterPas
                         buffer = ""
 
             elif "Available interfaces:" in screen_buffer and wan_configured and not lan_configured:
-                # Assign LAN to 10.0.30.80/24
+                # Assign LAN to 10.3.8.1/24
                 lan_number = search(r"(\d+) - LAN", screen_buffer)
                 if lan_number:
                     child.send(f"{lan_number.group(1)}\r")

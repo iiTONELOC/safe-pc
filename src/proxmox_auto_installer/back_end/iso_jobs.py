@@ -11,15 +11,15 @@ from proxmox_auto_installer.iso.iso import ModifiedProxmoxISO, ProxmoxISO, TOTAL
 from utm.utils.utils import calculate_percentage
 
 MAX_JOBS = 5  # Maximum number of concurrent jobs
-LOGGER = getLogger("proxmox_auto_installer.back_end.iso_jobs" if __name__ == "__main__" else __name__)
+LOGGER = getLogger("proxmox_auto_installer.back_end.iso_jobs")
 
 
-job_status = Literal["pending", "in_progress", "completed", "failed"]
+job_status = Literal["pending", "in progress", "completed", "failed"]
 
 
 class JobStatus:
     PENDING = "pending"
-    IN_PROGRESS = "in_progress"
+    IN_PROGRESS = "in progress"
     COMPLETED = "completed"
     FAILED = "failed"
 
@@ -66,6 +66,7 @@ class Job:
                         "progress": progress,
                         "status": self.status,
                         "message": message,
+                        "jobId": str(self.job_id),
                     }
                 },
             )
@@ -162,6 +163,11 @@ class Job:
                 final_path = self._modified_iso.move_iso_to_final_location(final_dir=isos_root)  # type: ignore
                 if self.cache:
                     await self.cache.set_iso_path(self.job_id.__str__(), final_path)  # STORE FILE PATH
+                # delete the job folder, iso is already created and moved, its not needed anymore
+
+                LOGGER.info(f"ISO moved to final location: {final_path}")
+                self._modified_iso.cleanup_job_folder()
+                LOGGER.info(f"Cleaned up job folder for job {self.job_id}")
             except Exception as e:
                 LOGGER.error(f"Error moving ISO to final location: {e}")
                 await self.update_status(JobStatus.FAILED)
