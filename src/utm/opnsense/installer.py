@@ -2,15 +2,16 @@ from asyncio import sleep
 from logging import getLogger
 
 from utm.utils.console_driver import ConsoleDriver
-from utm.__main__ import run_command_async, setup_logging
 from utm.proxmox.vms import stop_vm, get_vm_status
+from utm.__main__ import run_command_async, setup_logging
+from utm.opnsense.xml_template_sync import xml_template_sync
 from utm.opnsense.pexpect_drivers import drive_installer, drive_configurator  # type: ignore
 
 
 logout_time_mins = 10
 base_prefix = "[OPNSense Installer] "
 logout_time_secs = logout_time_mins * 60
-logger = getLogger("utm.opnsense.install_and_configure")
+logger = getLogger("utm.opnsense.installer")
 
 DEFAULT_ROOT_PASSWORD = "UseBetterPassword!23"
 
@@ -49,7 +50,7 @@ async def install_opnsense(vm_id: str, root_password: str = DEFAULT_ROOT_PASSWOR
     return False
 
 
-async def post_install_config(vm_id: str, root_password: str = DEFAULT_ROOT_PASSWORD) -> bool:
+async def post_install_interface_config(vm_id: str, root_password: str = DEFAULT_ROOT_PASSWORD) -> bool:
     try:
         async with ConsoleDriver(int(vm_id), logger, base_prefix) as console:
             # configure the machine here after it rebooted
@@ -61,10 +62,8 @@ async def post_install_config(vm_id: str, root_password: str = DEFAULT_ROOT_PASS
                     await sleep(2.5)
                 except Exception:
                     await sleep(2.5)
-            # should not get here as we turned off the installer ISO
             logger.info(f"{base_prefix}Starting post-install configuration for VM ID {vm_id}.")
             await drive_configurator(console.child, root_password)  # type: ignore
-            # the main installer has finished its job, now we need to configure the system
             return True
     except Exception as e:
         logger.error(f"{base_prefix}Error during post-install configuration: {e}")
@@ -74,13 +73,14 @@ async def post_install_config(vm_id: str, root_password: str = DEFAULT_ROOT_PASS
 async def runner(vm_id: str, root_password: str = DEFAULT_ROOT_PASSWORD) -> None:
     steps = [
         ("Installing OPNsense", install_opnsense),
-        ("Post-install configuration", post_install_config),
+        ("Post-install configuration", post_install_interface_config),
+        ("Merging SafeSense XML template", xml_template_sync),
     ]
     index = 0
     for step_name, step_func in steps:
         logger.info(f"{base_prefix}Starting step: {step_name}")
         success = await step_func(vm_id, root_password)
-        # if its not the last step, we need tow ait bwetween steps
+        # if its not the last step, we need to wait between steps
         if index < len(steps) - 1:
             index += 1
             await sleep(10)  # give the system some time to register its off

@@ -23,7 +23,7 @@ async def stop_vm(vm_id: str) -> None:
 
 async def restart_vm(vm_id: str) -> None:
     """Restart a Proxmox VM."""
-    await run_command_async("qm", "restart", vm_id)
+    await run_command_async("qm", "reboot", vm_id)
 
 
 async def reset_vm(vm_id: str) -> None:

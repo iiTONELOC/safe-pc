@@ -26,9 +26,6 @@ def main(dev: bool = False):
         subprocess.run(["rm", "-rf", str(safe_pc_dist)])
     safe_pc_dist.mkdir(parents=True, exist_ok=True)
 
-    # copy ansible into dist
-    subprocess.run(["cp", "-r", str(project_root / "ansible"), str(safe_pc_dist / "ansible")])
-
     # create a src directory in dist/safe_pc
     src_dist = safe_pc_dist / "src"
     src_dist.mkdir(parents=True, exist_ok=True)
@@ -45,14 +42,9 @@ def main(dev: bool = False):
         ]
     )
 
-    # move the toml from the root of dist/safe_pc/utm to dist/safe_pc
-    subprocess.run(
-        [
-            "mv",
-            str(src_dist / "utm" / "pyproject.toml"),
-            str(safe_pc_dist / "pyproject.toml"),
-        ]
-    )
+    # move the pyproject.toml and copy the opnsense config from the root of dist/safe_pc/utm to dist/safe_pc
+    subprocess.run(["mv", str(src_dist / "utm" / "pyproject.toml"), str(safe_pc_dist / "pyproject.toml")])
+    subprocess.run(["cp", str(project_root / "safety_config.xml"), str(safe_pc_dist)])
 
     # if dev flag is set, deploy to proxmox
     if dev:
@@ -77,6 +69,7 @@ aiofiles>=24.1.0,<25.0.0
 ansible>=12.1.0,<13.0.0
 tqdm>=4.67.1,<5.0.0
 pexpect>=4.9.0,<5.0.0
+bcrypt>=5.0.0,<6.0.0
     """
 
     with open(requirements_file, "w") as f:

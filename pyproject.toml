@@ -21,6 +21,7 @@ dependencies = [
     "passlib (>=1.7.4,<2.0.0)",
     "websockets (>=15.0.1,<16.0.0)",
     "pexpect (>=4.9.0,<5.0.0)",
+    "bcrypt (>=5.0.0,<6.0.0)",
     ]
 
 [tool.poetry.dependencies]
