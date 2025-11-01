@@ -2,31 +2,49 @@
 Maker{% endblock %} {% block content %}
 
 <div
-  class="flex flex-wrap flex-row justify-center items-center min-h-[calc(100vh_-_var(--header-height)_-_58px)] p- gap-10"
+  class="flex flex-col items-center justify-center w-full max-w-3xl mx-auto min-h-[calc(100vh_-_var(--header-height)_-_58px)] p-8"
 >
-  {% for job_id in job_ids %}
-  <button
-    class="group flex flex-col items-center justify-between p-8 bg-gradient-to-br from-slate-900/60 via-slate-950/50 to-black/60 border border-sky-400/40 rounded-2xl hover:bg-slate-800/40 hover:scale-105 transition-all duration-300 shadow-[0_0_25px_rgba(34,211,238,0.25)] hover:shadow-[0_0_45px_rgba(34,211,238,0.65)]"
-    data-job-id="{{ job_id }}"
-  >
-    <h2 class="text-lg text-sky-200 font-medium mb-2 group-hover:text-sky-300">
-      ISO {{ job_id[-10:] }}…
-    </h2>
+  <h2 class="text-3xl font-semibold text-sky-200 -mt-16 mb-10">
+    Saved Installers
+  </h1>
 
-    <div class="flex items-center justify-center">
-      <div
-        class="w-20 h-20 bg-gradient-to-br from-slate-700/70 to-slate-800/70 rounded-full border-4 border-sky-700 shadow-inner flex items-center justify-center group-hover:border-sky-300 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.6)] group-hover:rotate-180 transition-all duration-500"
+  <ul class="w-full flex flex-col gap-3">
+    {% for job_id in job_ids %}
+    <li>
+      <button
+        class="w-full flex items-center justify-between bg-slate-900/60 hover:bg-slate-800/70 border border-sky-500/30 rounded-lg px-5 py-4 text-left group transition-all duration-200 shadow hover:shadow-sky-500/20"
+        data-job-id="{{ job_id }}"
       >
-        <div
-          class="w-5 h-5 bg-sky-700 rounded-full border-2 border-slate-500/70 group-hover:bg-sky-400 transition-colors duration-500"
-        ></div>
-      </div>
-    </div>
+        <div class="flex flex-col">
+          <span class="font-mono text-sky-300 text-md">{{ job_id }}</span>
+          <span class="text-sm text-sky-500 group-hover:text-sky-300">
+            View details / download
+          </span>
+        </div>
 
-    <span class="text-sm text-sky-400 mt-4">View & Download</span>
-  </button>
-  {% endfor %}
+        <svg
+          class="w-6 h-6 text-sky-400 group-hover:text-sky-200 transition"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M9 5l7 7-7 7"
+          />
+        </svg>
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+
+  {% if not job_ids %}
+  <p class="text-sky-400 mt-10 text-sm">No installers saved yet.</p>
+  {% endif %}
 </div>
+
 {% endblock %} {% block footer_scripts %}
 <script
   src="{{ url_for('static', path='/js/history.js') }}"
