@@ -177,11 +177,14 @@ def main():
     """
     Entry point for the backend servers
     """
+    answer_server_thread = threading.Thread(target=lambda: run(ProxHttpSever.run()), daemon=True)  # type: ignore
+    ui_api_server_thread = threading.Thread(target=lambda: run(ProxHttpsServer.run()), daemon=True)
 
-    # Used for Answer File Discovery and Download
-    run(main=ProxHttpSever.run())  # type: ignore
-    # Used for Proxmox Installer Interface and API
-    run(main=ProxHttpsServer.run())
+    answer_server_thread.start()
+    ui_api_server_thread.start()
+
+    answer_server_thread.join()
+    ui_api_server_thread.join()
 
 
 @handle_keyboard_interrupt

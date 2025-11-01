@@ -29,7 +29,7 @@ MANIFEST
 # Local environment
 .DS_Store
 log[s]/
-data/
+data*/
 .log
 .env
 certs

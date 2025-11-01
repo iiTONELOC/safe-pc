@@ -121,6 +121,9 @@ def get_local_ip() -> str:
     Returns:
         str: The local IP address.
     """
+    env_ip = environ.get("HOST_IP")
+    if env_ip:
+        return env_ip
     hostname = gethostname()
     local_ip = gethostbyname(hostname)
     return local_ip

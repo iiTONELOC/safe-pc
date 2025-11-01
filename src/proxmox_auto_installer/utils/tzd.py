@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from shutil import which
 from locale import getlocale
 
 
@@ -51,44 +52,40 @@ class ProxmoxTimezoneHelper:
 
     def get_local_timezone(self) -> str:
         """
-        Determines and returns the local timezone as a string.
-        First tries to detect the timezone using Unix system files.
-        If unsuccessful, attempts to retrieve the timezone using an external IP-based API.
-        If all methods fail, defaults to "America/New_York".
-        Returns:
-            str: The local timezone string, or "America/New_York" if detection fails.
+        Resolve system timezone as robustly as possible.
+        Works on host systems (systemd) and inside Docker (no timedatectl).
         """
 
-        # use timedatectl
-        tz_show_out = os.popen("timedatectl show -p Timezone").read().strip()
-        if tz_show_out and "=" in tz_show_out:
-            tz = tz_show_out.split("=")[-1].strip()
-            if tz in self._timezones:  # type: ignore
-                return tz
+        # 1. timedatectl (systemd hosts)
+        if which("timedatectl"):
+            tz_show_out = os.popen("timedatectl show -p Timezone").read().strip()
+            if tz_show_out and "=" in tz_show_out:
+                tz = tz_show_out.split("=")[-1].strip()
+                if tz in self._timezones:  # type: ignore
+                    return tz
 
-        # if that fails, try to read /etc/timezone
+        # 2. /etc/timezone (Debian/Ubuntu style)
         etc_tz = Path("/etc/timezone")
         if etc_tz.exists():
             tz = etc_tz.read_text().strip()
             if tz in self._timezones:  # type: ignore
                 return tz
 
-        # if that fails, try to read /etc/localtime symlink
+        # 3. /etc/localtime symlink (Alpine, Docker, most distros)
         etc_localtime = Path("/etc/localtime")
-        if etc_localtime.exists() and etc_localtime.is_symlink():
+        if etc_localtime.exists():
             try:
-                tz_path = os.readlink(etc_localtime)
-                if "zoneinfo" in tz_path:
-                    tz = tz_path.split("zoneinfo")[-1].lstrip("/")
+                real_path = etc_localtime.resolve()
+                if "zoneinfo" in str(real_path):
+                    tz = str(real_path).split("zoneinfo/")[-1]
                     if tz in self._timezones:  # type: ignore
                         return tz
-            except Exception as e:
-                print("Error reading /etc/localtime symlink:", e)
+            except Exception:
+                pass
 
-        # if that fails, use default
-
+        # 4. Last resort
         self._local_timezone = "America/New_York"
-        return "America/New_York"  # last fallback
+        return "America/New_York"
 
     def _ensure_initialized(self):
         if self._timezones is None:

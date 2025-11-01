@@ -11,6 +11,30 @@ LOGGER = getLogger(__name__)
 CACHED_DATA_DIR = Path(__file__).parents[3] / "data" / "cached_answers"
 
 
+def _resolve_cache_path(p: str) -> Path:
+    """
+    Ensure cache paths work inside Docker even if the manifest has host paths.
+
+    If the stored path doesn't exist:
+      - Strip off host prefix and remap under CACHED_DATA_DIR/data
+    """
+
+    p = Path(p)  # type: ignore
+    if p.exists():  # type: ignore
+        return p  # type: ignore
+
+    # fallback rewrite for host paths
+    try:
+        name = p.name  # job_id.answer  # type: ignore
+        alt = CACHED_DATA_DIR / "data" / name  # type: ignore
+        if alt.exists():  # type: ignore
+            return alt  # type: ignore
+    except Exception:
+        pass
+
+    return p  # type: ignore
+
+
 class CacheManager:
     MANIFEST_VERSION = 1
 
@@ -79,7 +103,7 @@ class CacheManager:
     async def read_answer_bytes(self, job_id: str) -> bytes | None:
         """Asynchronously reads the answer file bytes for a given job_id."""
         async with self._lock:
-            p = Path(self._manifest["answers"].get(job_id, ""))
+            p = _resolve_cache_path(self._manifest["answers"].get(job_id, ""))
             return await asyncio.to_thread(p.read_bytes) if p.exists() else None
 
     def get_answer_path(self, job_id: str) -> Path | None:
@@ -87,7 +111,7 @@ class CacheManager:
         path_str = self._manifest["answers"].get(job_id)
         if not path_str:
             return None
-        p = Path(path_str)
+        p = _resolve_cache_path(path_str)
         return p if p.exists() else None
 
     async def delete_answer(self, job_id: str):
@@ -100,7 +124,7 @@ class CacheManager:
             path = self._manifest["answers"].pop(job_id, None)
             await self._persist_manifest()
         if path:
-            p = Path(path)
+            p = _resolve_cache_path(path)
             if p.exists():
                 await asyncio.to_thread(p.unlink)
 
@@ -126,7 +150,7 @@ class CacheManager:
         path_str = self._manifest["isos"].get(job_id)
         if not path_str:
             return None
-        p = Path(path_str)
+        p = _resolve_cache_path(path_str)
         return p if p.exists() else None
 
     async def delete_iso(self, job_id: str, remove_file: bool = False):
@@ -140,7 +164,7 @@ class CacheManager:
             path = self._manifest["isos"].pop(job_id, None)
             await self._persist_manifest()
         if remove_file and path:
-            p = Path(path)
+            p = _resolve_cache_path(path)
             if p.exists():
                 await asyncio.to_thread(p.unlink)
 
