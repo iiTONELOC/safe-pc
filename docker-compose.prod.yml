@@ -2,12 +2,18 @@ services:
   prod:
     build:
       context: .
-      dockerfile: Dockerfile.dev
-    container_name: safe-pc-prod
+      dockerfile: Dockerfile.prod
+    container_name: safe-pc
     network_mode: host
     restart: unless-stopped
     environment:
       PYTHONUNBUFFERED: "1"
+      environment:
+      SAFE_CIDR: "${SAFE_CIDR:-10.0.2.238/24}"
+      SAFE_GATEWAY: "${SAFE_GATEWAY:-10.0.2.1}"
+      SAFE_DNS: "${SAFE_DNS:-10.0.2.1}"
+      HOST_IP: "${HOST_IP:-10.0.4.2}"
+
     volumes:
       - ./data:/app/data
       - ./certs:/app/certs

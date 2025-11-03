@@ -1,9 +1,9 @@
 import errno
 import traceback
-from typing import Any
 from pathlib import Path
 from httpx import AsyncClient
 from logging import getLogger
+from typing import Any, Literal
 from tempfile import TemporaryDirectory
 from contextlib import asynccontextmanager
 from collections.abc import Callable, Awaitable
@@ -18,6 +18,14 @@ LOGGER = getLogger(__name__)
 
 HTTP_CHUNK_SIZE = 1024 * 1024  # 1 MB
 BUFFER_SIZE = HTTP_CHUNK_SIZE * 4  # 4 MB
+
+
+type ProxmoxIsoType = Literal["Proxmox VE"]
+type OpnsenseIsoType = Literal["OPNsense"]
+type IsoType = ProxmoxIsoType | OpnsenseIsoType | str
+
+PROXMOX_ISO: ProxmoxIsoType = "Proxmox VE"
+OPNSENSE_ISO: OpnsenseIsoType = "OPNsense"
 
 
 @asynccontextmanager
@@ -50,13 +58,14 @@ async def _update_progress(
     downloaded: int = 0,
     size: int = 0,
     on_update: Callable[[int, int, str], Any] | None = None,
+    iso: IsoType = PROXMOX_ISO,
 ) -> int:
     downloaded += n
     if _should_use_progress(use_progress=use_progress, progress=progress):
         if progress is not None:
             progress.update(n)
     elif on_update:
-        await on_update(downloaded, size, "Downloading Proxmox VE ISO...")
+        await on_update(downloaded, size, f"Downloading {iso} ISO...")
     return downloaded
 
 
@@ -65,6 +74,7 @@ async def _single_downloader_async(
     dest_path: Path,
     size: int,
     on_update: Callable[[int, int, str], Any] | None = None,
+    iso: IsoType = PROXMOX_ISO,
 ):
     downloaded = 0
     use_progress = on_update is None
@@ -86,6 +96,7 @@ async def _single_downloader_async(
                         downloaded=downloaded,
                         size=size,
                         on_update=on_update,
+                        iso=iso,
                     )
                     buffer.clear()
 
@@ -98,6 +109,7 @@ async def _single_downloader_async(
                     downloaded=downloaded,
                     size=size,
                     on_update=on_update,
+                    iso=iso,
                 )
     except Exception:
         if dest_path.exists():
@@ -112,6 +124,7 @@ async def handle_download(
     url: str,
     dest_path: Path,
     on_update: Callable[[int, int, str], Any] | None = None,
+    iso: IsoType = PROXMOX_ISO,
 ):
     """
     Asynchronously downloads a file from the specified URL to the given destination path.
@@ -137,7 +150,7 @@ async def handle_download(
 
         # dest_path.parent.mkdir(parents=True, exist_ok=True)
         LOGGER.info(f"Starting download: {url} to {dest_path} ({size} bytes)")
-        await _single_downloader_async(url, dest_path, size, on_update)
+        await _single_downloader_async(url, dest_path, size, on_update, iso)
         LOGGER.info(msg=f"Download complete: {dest_path}")
     except Exception as e:
         LOGGER.error(f"Download failed: {e}")
@@ -204,7 +217,7 @@ class ISODownloader:
         self.get_iso_info = get_iso_info
         self.temp_dir = TemporaryDirectory()
 
-    async def run(self, dl_if_exists: bool = False) -> "ISODownloader":
+    async def run(self, dl_if_exists: bool = False, iso: IsoType = PROXMOX_ISO) -> "ISODownloader":
         """Perform the full download + verify process manually."""
         try:
 
@@ -228,7 +241,7 @@ class ISODownloader:
             # ensure the destination directory exists
             self.dest_dir.mkdir(parents=True, exist_ok=True)
 
-            await handle_download(url, self.iso_path, self.on_update)
+            await handle_download(url, self.iso_path, self.on_update, iso)
             actual_hash = await compute_sha256(str(self.iso_path))
 
             if actual_hash.lower() != self.expected_sha256.lower():

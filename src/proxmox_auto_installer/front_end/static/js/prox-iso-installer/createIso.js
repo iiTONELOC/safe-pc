@@ -51,6 +51,11 @@ export async function createIso(
             setTimeout(() => {
               completeIcon.classList.remove("hidden");
             }, 300);
+          } else if (
+            progress < 100 &&
+            !completeIcon.classList.contains("hidden")
+          ) {
+            completeIcon.classList.add("hidden");
           }
 
           break;

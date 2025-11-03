@@ -5,8 +5,17 @@ services:
       dockerfile: Dockerfile.dev
     container_name: safe-pc-dev
     volumes:
-      - .:/app
+      - ./src:/app/src
+      - ./certs:/app/certs
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./dist:/app/dist
+
     network_mode: host
     environment:
       PYTHONPATH: /app/src
-    command: poetry run dev
+      PYTHONUNBUFFERED: "1"
+      SAFE_CIDR: "${SAFE_CIDR:-10.0.2.238/24}"
+      SAFE_GATEWAY: "${SAFE_GATEWAY:-10.0.2.1}"
+      SAFE_DNS: "${SAFE_DNS:-10.0.2.1}"
+      HOST_IP: "${HOST_IP:-10.0.4.2}"

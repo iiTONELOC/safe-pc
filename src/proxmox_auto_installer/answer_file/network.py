@@ -1,3 +1,4 @@
+from os import environ
 from re import compile as re_compile
 from ipaddress import ip_address, ip_network
 from pydantic import BaseModel, Field, field_validator
@@ -14,9 +15,9 @@ MAC_PATTERN = re_compile(r"^\*?[0-9A-Fa-f]{12}$")
 
 NETWORK_CONFIG_DEFAULTS = {
     "source": SOURCE_FROM_ANSWER,
-    "cidr": "10.0.2.238/24",
-    "gateway": "10.0.2.1",
-    "dns": "10.0.2.1",
+    "cidr": environ.get("SAFE_CIDR", "10.0.2.238/24"),
+    "gateway": environ.get("SAFE_GATEWAY", "10.0.2.1"),
+    "dns": environ.get("SAFE_DNS", "10.0.2.1"),
     "mac_filter": "*bc241129f843",
 }
 

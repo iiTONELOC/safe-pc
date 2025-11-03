@@ -288,8 +288,12 @@ WantedBy=multi-user.target
 
         # download opnsense iso now and roll it up into the proxmox iso at
         # the expected location /var/lib/vz/template/iso/
-        await on_update(15, "Downloading OPNsense ISO...")
-        success = await download_and_verify_opnsense_iso()
+        await on_update(0, "Downloading OPNsense ISO...")
+        success = await download_and_verify_opnsense_iso(
+            on_update=lambda p, t, m: on_update(
+                max(0, min(int((p / t) * TOTAL_STEPS), TOTAL_STEPS)), m or "OPNsense ISO..."
+            )
+        )
         if not success:
             self.LOGGER.error("Failed to download OPNsense ISO")
             return None

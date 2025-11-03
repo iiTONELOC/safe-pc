@@ -14,6 +14,7 @@ from proxmox_auto_installer.back_end.iso_jobs import get_job, send_socket_update
 from proxmox_auto_installer.answer_file.cached_answers import CacheManager
 from proxmox_auto_installer.answer_file.answer_file import (
     ProxmoxAnswerFile,
+    NETWORK_CONFIG_DEFAULTS,
     create_answer_file_from_dict,
 )
 
@@ -79,6 +80,9 @@ class HttpsRoutes:
                     "request": request,
                     "start_year": HttpsRoutes.START_YEAR,
                     "current_year": HttpsRoutes.CURRENT_YEAR,
+                    "SAFE_CIDR": NETWORK_CONFIG_DEFAULTS["cidr"],
+                    "SAFE_GATEWAY": NETWORK_CONFIG_DEFAULTS["gateway"],
+                    "SAFE_DNS": NETWORK_CONFIG_DEFAULTS["dns"],
                 },
             )
 

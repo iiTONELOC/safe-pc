@@ -4,7 +4,7 @@ from logging import getLogger
 from collections.abc import Callable, Awaitable
 
 from utm.__main__ import run_command_async
-from utm.utils import ISODownloader, fetch_text_from_url, remove_bz2_compression
+from utm.utils import ISODownloader, fetch_text_from_url, remove_bz2_compression, OPNSENSE_ISO, IsoType
 
 LOGGER = getLogger(__name__)
 
@@ -28,13 +28,16 @@ class OpnSenseISODownloader(ISODownloader):
         get_iso_info: Callable[[], Awaitable[TChild]],
         dest_dir: Path,
         on_update: Callable[[int, int, str], None] | None = None,
+        iso: IsoType = OPNSENSE_ISO,
     ):
         # Wrap it so parent sees a no-arg async callable
         super().__init__(self._wrap_get_iso_info(get_iso_info), dest_dir, on_update)
 
         self.public_key: str = ""
+        self.on_update = on_update
         self.downloaded_from: str = ""
         self.expected_sha256: str = ""
+
         self.work_dir: Path = Path("/tmp/opnsense_iso_downloader")
         # self.downloaded_files: list[Path] = []
         self.verification_status: bool = False
@@ -58,15 +61,18 @@ class OpnSenseISODownloader(ISODownloader):
 
     # Overrides
 
-    async def run(self, dl_if_exists: bool = False) -> "OpnSenseISODownloader":
+    async def run(self, dl_if_exists: bool = False, iso: IsoType = OPNSENSE_ISO) -> "OpnSenseISODownloader":
         # call the parent to download the ISO - this will verify the sha256
         # see @get_latest_opns_url_w_hash
         # but does not perform signature verification
-        downloaded = await super().run(dl_if_exists)
+        downloaded = await super().run(dl_if_exists, iso)
 
         # ensure we downloaded
         if not downloaded.verified:
             raise OpnSenseDownloadError("Failed to download OPNSense ISO")
+
+        if self.on_update:
+            self.on_update(72, 100, "Verifying OPNSense ISO signature...")
 
         # if we downloaded.verified but dont have a dest_path, we dont have one bc we didn't dl anything and there is
         # nothing to verify, the DL fn sets verified to true when the file already exists
@@ -76,7 +82,6 @@ class OpnSenseISODownloader(ISODownloader):
 
         # Handle verification of the DL. If we make it this far the public key and sha matches our expected
         # HOWEVER, signatures have not been verified yet
-
         # get the signature file from the same location as the downloaded ISO
         LOGGER.info(
             f"Downloading OPNSense ISO signature file from: {self.downloaded_from.replace('.img.bz2', '.img.sig')}"
@@ -87,6 +92,8 @@ class OpnSenseISODownloader(ISODownloader):
 
         # decompress the iso before verifying the signature - OPNSense uses bz2 compression
         # And calculates the sha256 of the decompressed file
+        if self.on_update:
+            self.on_update(74, 100, "Decompressing OPNsense IMG.")
         LOGGER.info(f"Decompressing OPNSense IMG file: {self.dest_path}")
         decompressed_path = await remove_bz2_compression(self.dest_path)
 
@@ -115,6 +122,9 @@ class OpnSenseISODownloader(ISODownloader):
             str(decompressed_path),
             check=False,
         )
+
+        if self.on_update:
+            self.on_update(77, 100, "OPNSense ISO signature verification complete.")
 
         if cmd_result.returncode != 0 or "Verified OK" not in cmd_result.stdout:  # type: ignore
             LOGGER.error(f"Signature verification failed: {cmd_result.stderr}")  # type: ignore

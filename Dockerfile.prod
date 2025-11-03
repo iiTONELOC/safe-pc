@@ -1,8 +1,21 @@
+# Build the front end first then we don't need node in final image
+FROM node:24.8 AS nodebuild
+WORKDIR /app
+COPY . /app
+# Build frontend
+WORKDIR /app/src/proxmox_auto_installer/front_end/tailwindcss
+RUN npm ci || npm install && npm run build
+
+# Build final container image
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/root/.local/bin:$PATH"
+
+
+WORKDIR /app
+COPY . /app
 
 # System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,30 +35,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xorriso \
     zstd && \
     rm -rf /var/lib/apt/lists/*
+
 # Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 -
-
-# Node 24.x for tailwind
-RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
- && apt-get update && apt-get install -y --no-install-recommends nodejs \
- && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
-
-WORKDIR /app
-COPY . /app
 
 # Install python deps + build certs
 RUN poetry config virtualenvs.create true \
  && poetry install --no-interaction --no-ansi \
  && poetry run gen-cert
 
-# Build frontend
-WORKDIR /app/src/proxmox_auto_installer/front_end/tailwindcss
-RUN npm ci || npm install && npm run build
+# Copy built css from node build stage - currently thats all we do, no minification or anything is done
+WORKDIR /app/src/proxmox_auto_installer/front_end/static/css
+COPY --from=nodebuild /app/src/proxmox_auto_installer/front_end/static/css/tailwind.css ./tailwind.css
 
 # Back to app root
 WORKDIR /app
 
-# persistent dirs for runtime
+# persistent dirs for runtime data
 RUN mkdir -p /app/certs /app/data/isos /app/data/cached_answers/data /app/dist /app/logs
 
 VOLUME ["/app/certs", "/app/data", "/app/dist", "/app/logs"]

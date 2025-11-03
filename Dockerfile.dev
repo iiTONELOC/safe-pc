@@ -33,7 +33,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
 
 WORKDIR /app
 
-# Pre-create persistent dirs BEFORE code mount/copy
+# Pre-create persistent dirs
 RUN mkdir -p \
     /app/src \
     /app/certs \

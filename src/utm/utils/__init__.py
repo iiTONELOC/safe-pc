@@ -21,12 +21,18 @@ from utm.utils.utils import (
 )
 from utm.utils.quorum import reach_consensus
 from utm.utils.iso_dl import (
+    IsoType,
+    PROXMOX_ISO,
+    OPNSENSE_ISO,
     ISODownloader,
     need_to_download,
 )
 
 
 __all__ = [
+    "IsoType",
+    "PROXMOX_ISO",
+    "OPNSENSE_ISO",
     "get_local_ip",
     "TempKeyFile",
     "verify_sha256",

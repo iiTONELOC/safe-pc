@@ -164,8 +164,8 @@
               name="cidr"
               type="text"
               autocomplete="off"
-              placeholder="10.0.2.238/24"
-              data-default-value="10.0.2.238/24"
+              placeholder="{{SAFE_CIDR}}"
+              data-default-value="{{SAFE_CIDR}}"
               title="Enter a valid IPv4 address with CIDR (e.g., 192.168.0.1/24)"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
             />
@@ -185,8 +185,8 @@
               id="gateway"
               name="gateway"
               autocomplete="off"
-              placeholder="10.0.2.1"
-              data-default-value="10.0.2.1"
+              placeholder="{{ SAFE_GATEWAY }}"
+              data-default-value="{{ SAFE_GATEWAY }}"
               title="Enter a valid IPv4 address"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
             />
@@ -206,8 +206,8 @@
               name="dns"
               type="text"
               autocomplete="off"
-              placeholder="10.0.2.1, 9.9.9.9"
-              data-default-value="10.0.2.1"
+              placeholder="{{SAFE_DNS}}, 9.9.9.9"
+              data-default-value="{{SAFE_DNS}}"
               title="Enter one or more IPv4 addresses separated by commas"
               class="mt-1 block w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-sky-500"
             />
