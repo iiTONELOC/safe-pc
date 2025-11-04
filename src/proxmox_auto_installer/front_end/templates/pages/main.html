@@ -1,7 +1,7 @@
 {% extends "layouts/main.html" %} {% block title %}Installer | Safe-PC Maker{%
 endblock %} {% block content %}
 <div
-  class="flex flex-col md:flex-row p-4 md:p-1 justify-center items-center gap-10 sm:gap-20 md:gap-50 lg:gap-60 min-h-[calc(100vh_-_var(--header-height)_-_58px)]"
+  class="flex flex-col md:flex-row p-8 justify-center items-center gap-10 sm:gap-20 md:gap-50 lg:gap-60 min-h-[calc(100vh_-_var(--header-height)_-_58px)] w-screen min-w-[313px]"
 >
   {% with title="Create Installer", action="create" %} {% include
   "partials/components/iso-card.html" %} {% endwith %} {% with title="Saved

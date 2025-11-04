@@ -1,8 +1,7 @@
 import os
 from pathlib import Path
-from shutil import which
 from locale import getlocale
-
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from proxmox_auto_installer.utils.country_codes import ProxmoxCountryCodeHelper
 
@@ -17,7 +16,7 @@ def _get_timezones() -> list[str]:
         # read the file
         file = f.read()
         # split by white space and filter out empty lines
-        timezones = [line.strip() for line in file.split(" ") if line.strip()]
+        timezones = [line.strip() for line in file.split("\n") if line.strip()]
     return timezones
 
 
@@ -50,42 +49,16 @@ class ProxmoxTimezoneHelper:
 
         return "US"
 
+    def _canonical_tz(self, tz: str) -> str:
+        try:
+            return ZoneInfo(tz).key  # turns Etc/UTC -> UTC
+        except ZoneInfoNotFoundError:
+            return tz
+
     def get_local_timezone(self) -> str:
-        """
-        Resolve system timezone as robustly as possible.
-        Works on host systems (systemd) and inside Docker (no timedatectl).
-        """
-
-        # 1. timedatectl (systemd hosts)
-        if which("timedatectl"):
-            tz_show_out = os.popen("timedatectl show -p Timezone").read().strip()
-            if tz_show_out and "=" in tz_show_out:
-                tz = tz_show_out.split("=")[-1].strip()
-                if tz in self._timezones:  # type: ignore
-                    return tz
-
-        # 2. /etc/timezone (Debian/Ubuntu style)
-        etc_tz = Path("/etc/timezone")
-        if etc_tz.exists():
-            tz = etc_tz.read_text().strip()
-            if tz in self._timezones:  # type: ignore
-                return tz
-
-        # 3. /etc/localtime symlink (Alpine, Docker, most distros)
-        etc_localtime = Path("/etc/localtime")
-        if etc_localtime.exists():
-            try:
-                real_path = etc_localtime.resolve()
-                if "zoneinfo" in str(real_path):
-                    tz = str(real_path).split("zoneinfo/")[-1]
-                    if tz in self._timezones:  # type: ignore
-                        return tz
-            except Exception:
-                pass
-
-        # 4. Last resort
-        self._local_timezone = "America/New_York"
-        return "America/New_York"
+        # default to environment variable SAFE_TZ or America/New_York
+        # this will be set by the client
+        return os.environ.get("SAFE_TZ", "America/New_York")
 
     def _ensure_initialized(self):
         if self._timezones is None:

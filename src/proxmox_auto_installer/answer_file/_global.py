@@ -9,14 +9,7 @@ country_list = ProxmoxCountryCodeHelper().get_country_codes_list()
 
 COUNTRY_CODE_PATTERN = re_compile(r"^[a-z]{2}$")
 KEYBOARD_COUNTRY_PATTERN = re_compile(r"^[a-z]{2}(-[a-z]{2})?$")
-TIMEZONE_PATTERN = re_compile(
-    r"^(?:"
-    r"UTC|GMT|Z|"  # common aliases
-    r"Etc/GMT[+-]\d{1,2}|"  # Etc/GMT+/-H
-    r"(?:[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*/){1,3}"  # 2–4 segments total
-    r"[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*"
-    r")$"
-)
+TIMEZONE_PATTERN = re_compile(r"^(UTC|[A-Za-z_]+\/[A-Za-z_]+(?:\/[A-Za-z_]+)?)$")
 FQDN_PATTERN = re_compile(r"^([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$")
 HASHED_PASSWORD_PATTERN = re_compile(r"^\$6\$rounds=\d{6}\$[./A-Za-z0-9]{1,16}\$[./A-Za-z0-9]{86}$")
 EMAIL_OR_LOCALHOST_PATTERN = re_compile(

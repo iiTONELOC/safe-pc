@@ -42,11 +42,6 @@ class ProxmoxAnswerFile(BaseModel):
         description="Disk setup configuration settings",
         alias="disk-setup",
     )
-    # first_boot: ProxFirstBootConfig = Field(
-    #     default_factory=ProxFirstBootConfig,
-    #     description="Proxmox first boot configuration settings",
-    #     alias="first-boot",
-    # )
 
     def to_dict(self) -> dict[str, Any]:
         # ensure none values are removed

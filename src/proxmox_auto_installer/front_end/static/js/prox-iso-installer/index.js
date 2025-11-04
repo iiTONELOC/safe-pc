@@ -25,6 +25,8 @@ const installerData = fetchInstallerData().catch((error) => {
   return { installerSettings: {} };
 });
 
+const getTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 // wait for the DOM to be ready
 document.addEventListener("DOMContentLoaded", async () => {
   // wait for installer data to be fetched
@@ -91,6 +93,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   formState.global.country = countrySelect.value || null;
   formState.global.timezone = timezoneSelect.value || null;
   formState.global.keyboard = keyboardSelect.value || null;
+
+  // set the timezone select to the user's timezone if no currentTimezone is or does not match
+  if (
+    !currentTimezone ||
+    currentTimezone.toLowerCase() !== getTimeZone().toLowerCase()
+  ) {
+    const userTz = getTimeZone();
+    timezoneSelect.value = userTz;
+    formState.global.timezone = userTz;
+  }
 
   // attach event listeners to form elements to handle validation and state updates
   for (const event of ["input", "change"]) {

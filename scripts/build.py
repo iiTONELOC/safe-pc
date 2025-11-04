@@ -6,8 +6,8 @@ from os import getenv
 from pathlib import Path
 
 
-DEV_PROX_USER = getenv("SAFE_PC_DEV_PROX_USER", "root")
-DEV_PROX_HOST = getenv("SAFE_PC_DEV_PROX_HOST", "10.0.2.238")
+DEV_PROX_USER = getenv("SAFE_PROX_USER", "root")
+DEV_PROX_HOST = getenv("SAFE_CIDR", "10.0.2.238/24").split("/")[0]
 
 
 def main(dev: bool = False):
@@ -58,22 +58,22 @@ def main(dev: bool = False):
             ]
         )
 
-    # create a requirements.txt file in dist/safe_pc
-    # read the pyproject.toml to get the dependencies
+    #     # create a requirements.txt file in dist/safe_pc
+    #     # read the pyproject.toml to get the dependencies
 
-    requirements_file = safe_pc_dist / "requirements.txt"
+    #     requirements_file = safe_pc_dist / "requirements.txt"
 
-    reqs = """
-httpx>=0.28.1,<0.29.0
-aiofiles>=24.1.0,<25.0.0
-ansible>=12.1.0,<13.0.0
-tqdm>=4.67.1,<5.0.0
-pexpect>=4.9.0,<5.0.0
-bcrypt>=5.0.0,<6.0.0
-    """
+    #     reqs = """
+    # httpx>=0.28.1,<0.29.0
+    # aiofiles>=24.1.0,<25.0.0
+    # tqdm>=4.67.1,<5.0.0
+    # pexpect>=4.9.0,<5.0.0
+    # bcrypt>=5.0.0,<6.0.0
+    # cryptography>=46.0.3,<47.0.0
+    #     """
 
-    with open(requirements_file, "w") as f:
-        f.write(reqs.strip() + "\n")
+    #     with open(requirements_file, "w") as f:
+    #         f.write(reqs.strip() + "\n")
 
     print(f"Build completed. Distribution available at: {dist_dir / 'safe_pc'}")
 

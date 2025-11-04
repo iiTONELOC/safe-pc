@@ -151,6 +151,15 @@ def filter_pci_nics(pci_nics: list[str]) -> list[str]:
     return filtered_pci_nics
 
 
+async def is_host_vm():
+    result: CmdResult = await run_command_async(
+        *["systemd-detect-virt"],
+        check=False,
+    )
+    output = result.stdout.strip() if result.stdout else ""
+    return output.lower() != "none"
+
+
 async def create_new_opnsense_vm(
     fw_name: str,
     vm_id: int,
@@ -239,25 +248,64 @@ async def create_new_opnsense_vm(
         return False
 
     # Attach first PCI NICs
-    filtered = filter_pci_nics(pci_nics)
-    for idx, pci_id in enumerate(filtered):
-        # Drop the .function part to pass through all functions (e.g., 0000:01:00)
-        pci_base = pci_id.rsplit(".", 1)[0]
-        pci_opts = f"{pci_base},pcie=1"
+    if not await is_host_vm():
+        filtered = filter_pci_nics(pci_nics)
+        for idx, pci_id in enumerate(filtered):
+            # Drop the .function part to pass through all functions (e.g., 0000:01:00)
+            pci_base = pci_id.rsplit(".", 1)[0]
+            pci_opts = f"{pci_base},pcie=1"
 
-        result: CmdResult = await run_command_async(
-            *[
-                "qm",
-                "set",
-                str(vm_id),
-                f"--hostpci{idx}={pci_opts}",
-            ],
-            check=False,
-        )
+            result: CmdResult = await run_command_async(
+                *[
+                    "qm",
+                    "set",
+                    str(vm_id),
+                    f"--hostpci{idx}={pci_opts}",
+                ],
+                check=False,
+            )
 
-        if result.returncode != 0:
-            logger.error(f"Failed to attach PCI NIC {pci_id}: {result.stderr}")
-            return False
+            if result.returncode != 0:
+                logger.error(f"Failed to attach PCI NIC {pci_id}: {result.stderr}")
+                return False
+    else:
+        # attach the nics as virtio rather than passthrough
+        # skipping the first nic (assumed to be management)
+        for idx in range(1, min(3, len(pci_nics))):
+            # NIC2 -> vmbr1, NIC3 -> vmbr2, etc.
+            bridge_name = f"vmbr{idx-1}"
+
+            # ensure persistent empty bridge in /etc/network/interfaces
+            exists = await run_command_async(
+                "bash",
+                "-lc",
+                f"grep -q -E '^(auto|iface)\\s+{bridge_name}\\b' /etc/network/interfaces",
+                check=False,
+            )
+            if exists.returncode != 0:
+                await run_command_async(
+                    "bash",
+                    "-lc",
+                    (
+                        "set -euo pipefail; "
+                        "tmp=$(mktemp); "
+                        'cat /etc/network/interfaces > "$tmp"; '
+                        f"printf '\\nauto {bridge_name}\\niface {bridge_name} inet manual\\n    bridge-ports none\\n    bridge-stp off\\n    bridge-fd 0\\n' >> \"$tmp\"; "
+                        'cat "$tmp" > /etc/network/interfaces; '
+                        'rm -f "$tmp"'
+                    ),
+                    check=False,
+                )
+                await run_command_async("ifreload", "-a", check=False)
+
+            # attach NIC as e1000 to the correct bridge
+            result: CmdResult = await run_command_async(
+                "qm", "set", str(vm_id), f"--net{idx}=e1000,bridge={bridge_name}", check=False
+            )
+            if result.returncode != 0:
+                logger.error(f"Failed to attach NIC {idx} to {bridge_name}: {result.stderr}")
+                return False
+
     # Enable autostart for production VM
     if is_prod:
         result: CmdResult = await run_command_async(
@@ -301,20 +349,24 @@ async def create_opnsense_vm():
         f"and {len(pci_nics)} PCI NICs."
     )
 
-    # Passthrough configuration (only runs once)
-    if environ.get("CAPSTONE_PASSTHROUGH_CONFIGURED", "0") != "1":
-        if len(pci_nics) < 2:
-            logger.error("Not enough PCI NICs for OPNsense VM (need at least 2).")
-            return False
+    # only if not a VM host, do passthrough configuration
+    if not await is_host_vm():
+        # Passthrough configuration (only runs once)
+        if environ.get("CAPSTONE_PASSTHROUGH_CONFIGURED", "0") != "1":
+            if len(pci_nics) < 2:
+                logger.error("Not enough PCI NICs for OPNsense VM (need at least 2).")
+                return False
 
-        if cpu_cores < 2 or memory_gb < 8 or disk_size_gb < 64:
-            logger.error("System does not meet minimum specs for OPNsense VM.")
-            return False
+            if cpu_cores < 2 or memory_gb < 8 or disk_size_gb < 64:
+                logger.error("System does not meet minimum specs for OPNsense VM.")
+                return False
 
-        await handle_pasthrough_configuration(pci_nics)
-        return True  # stop here, host is rebooting
+            await handle_pasthrough_configuration(pci_nics)  # passthrough last two NICs
+            return True  # stop here, host is rebooting
 
-    logger.info("PCI passthrough already configured. Proceeding to VM creation.")
+        logger.info("PCI passthrough already configured. Proceeding to VM creation.")
+    else:
+        logger.info("Host is a VM. Skipping PCI passthrough configuration.")
 
     # Allocate 85% of available resources, respecting minimums
     vm_cpu_cores, vm_memory_gb, vm_disk_size_gb = get_appropriate_resources(cpu_cores, memory_gb, disk_size_gb)

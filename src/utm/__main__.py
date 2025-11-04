@@ -354,17 +354,23 @@ async def dl_opnsense_iso():
 
 async def install_pythonvenv():
     logger.info("Checking for python3-venv installation...")
-    result_check = await run_command_async("which", "python3", "-m", "venv", check=False)
-    if result_check.returncode == 0:
-        logger.info("  python3-venv is already installed, skipping installation.")
-        return
-    logger.info("  Installing python3-venv...")
-    result = await run_command_async("apt", "install", "-y", "python3-venv", check=False)
+    try:
+        await run_command_async("python3", "-m", "venv", "--help")
+        # sure the /opt/safe_pc/venv/bin/pip exists
+        venv_bin = Path(CWD) / "venv" / "bin"
+        # check for pip, pip3, pip3.X etc. in the venv bin directory
+        if not venv_bin.exists() or not any(venv_bin.glob("pip*")):
+            raise ValueError("python3-venv is not fully installed (missing pip in venv/bin).")
+        logger.info("  python3-venv is already installed, skipping.")
+    except Exception as _:
 
-    if result.returncode == 0:
-        logger.info("  Installed python3-venv successfully.")
-    else:
-        raise ValueError(f"  Failed to install python3-venv. Return code: {result.returncode}")
+        logger.info("  Installing python3-venv...")
+        result = await run_command_async("apt", "install", "-y", "python3-venv", check=False)
+
+        if result.returncode == 0:
+            logger.info("  Installed python3-venv successfully.")
+        else:
+            raise ValueError(f"  Failed to install python3-venv. Return code: {result.returncode}")
 
 
 async def create_venv():
@@ -406,11 +412,11 @@ async def install_safe_pc_via_pip():
     logger.info("Installing SAFE PC via pip in virtual environment...")
     venv_path = Path(CWD) / "venv"
     pip_path = venv_path / "bin" / "pip"
-    result = await run_command_async(str(pip_path), "install", "-e", CWD, check=False)
+    result = await run_command_async(str(pip_path), "install", "-e", CWD, check=False, logger=logger)
     if result.returncode == 0:
         logger.info("  Successfully installed SAFE PC via pip in virtual environment.")
     else:
-        err_msg = f"Failed to install SAFE PC via pip in virtual environment. Return code: {result.returncode}"
+        err_msg = f"Failed to install SAFE PC via pip in virtual environment. Result: {result}"
         logger.error(err_msg)
         raise ValueError(err_msg)
 
@@ -418,7 +424,7 @@ async def install_safe_pc_via_pip():
 async def setup_venv_reqs_and_install_safe_pc():
     await install_pythonvenv()
     await create_venv()
-    await install_requirements()
+    # await install_requirements() # pip -e reads the pyproject.toml automatically
     await install_safe_pc_via_pip()
 
 

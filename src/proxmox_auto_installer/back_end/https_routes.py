@@ -195,6 +195,7 @@ class HttpsRoutes:
             ccd = cc_helper.get_country_codes()
             current_tz = tz_helper.get_local_timezone()
             current_country = tz_helper.get_local_country_code()
+
             return {
                 "installerSettings": {
                     "timezones": tsz,
