@@ -56,9 +56,9 @@ class ProxmoxTimezoneHelper:
             return tz
 
     def get_local_timezone(self) -> str:
-        # default to environment variable SAFE_TZ or America/New_York
+        # default to environment variable PROX_TZ or America/New_York
         # this will be set by the client
-        return os.environ.get("SAFE_TZ", "America/New_York")
+        return os.environ.get("PROX_TZ", "America/New_York")
 
     def _ensure_initialized(self):
         if self._timezones is None:

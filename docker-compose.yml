@@ -8,12 +8,17 @@ services:
     restart: unless-stopped
     environment:
       PYTHONUNBUFFERED: "1"
-      SAFE_PROX_USER: "${SAFE_USER:-root}"
-      SAFE_CIDR: "${SAFE_CIDR:-10.0.2.238/24}"
-      SAFE_GATEWAY: "${SAFE_GATEWAY:-10.0.2.1}"
-      SAFE_DNS: "${SAFE_DNS:-10.0.2.1}"
-      SAFE_TZ: "${SAFE_TZ:-America/New_York}"
+
+      PROX_USER: "${SAFE_USER:-root}"
+      SAFE_LAN_PREFIX: "${192.168.1:-10.3.8}"
+      SAFE_LAN_BIT_COUNT: "${SAFE_SUBNET_BIT_COUNT:-24}"
+      SAFE_LAN_FW_HOST: "${SAFE_LAN_FW_HOST:-${SAFE_LAN_PREFIX}.1}"
+      PROX_CIDR: "${PROX_CIDR:-10.0.2.238/24}"
+      PROX_GATEWAY: "${PROX_GATEWAY:-10.0.2.1}"
+      PROX_DNS: "${PROX_DNS:-10.0.2.1}"
+      PROX_TZ: "${PROX_TZ:-America/New_York}"
       HOST_IP: "${HOST_IP:-10.0.4.2}"
+      SAFE_SENSE_PWD: "${SAFE_SENSE_PWD:-UseBetterPassword!23}"
 
     volumes:
       - ./data:/app/data

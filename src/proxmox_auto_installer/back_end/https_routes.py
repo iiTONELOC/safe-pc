@@ -74,15 +74,18 @@ class HttpsRoutes:
         async def read_root(request: Request):  # type: ignore
             # generate a new jwt for the session if needed
 
+            net_defaults = NETWORK_CONFIG_DEFAULTS
+            print(f"Network defaults: {net_defaults}")
+
             response = templates.TemplateResponse(
                 name="/pages/main.html",
                 context={
                     "request": request,
                     "start_year": HttpsRoutes.START_YEAR,
                     "current_year": HttpsRoutes.CURRENT_YEAR,
-                    "SAFE_CIDR": NETWORK_CONFIG_DEFAULTS["cidr"],
-                    "SAFE_GATEWAY": NETWORK_CONFIG_DEFAULTS["gateway"],
-                    "SAFE_DNS": NETWORK_CONFIG_DEFAULTS["dns"],
+                    "PROX_CIDR": net_defaults["cidr"],
+                    "PROX_GATEWAY": net_defaults["gateway"],
+                    "PROX_DNS": net_defaults["dns"],
                 },
             )
 

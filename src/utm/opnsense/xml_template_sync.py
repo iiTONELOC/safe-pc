@@ -1,6 +1,6 @@
 import secrets
 import string
-from os import umask
+from os import environ, umask
 from json import dumps
 from pathlib import Path
 from asyncio import gather
@@ -117,6 +117,6 @@ if __name__ == "__main__":
 
     async def main() -> None:
         setup_logging()
-        await xml_template_sync("100", "UseBetterPassword!23")
+        await xml_template_sync("100", environ.get("SAFE_SENSE_PWD", "UseBetterPassword!23"))
 
     run(main())

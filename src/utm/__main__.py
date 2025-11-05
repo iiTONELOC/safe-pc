@@ -9,6 +9,8 @@ from collections.abc import Mapping, Sequence
 from logging.handlers import RotatingFileHandler
 from logging import INFO, WARNING, Logger, Formatter, StreamHandler, DEBUG, getLogger
 
+from dotenv import load_dotenv
+
 
 logger = getLogger("safe_pc.post_startup")
 
@@ -501,6 +503,7 @@ post_startup_steps = (
 
 @only_on_proxmox
 async def main():
+    load_dotenv()  # load any .env files if present
     setup_logging()  # ensures the logger is configured - poetry calls the main function directly
     logger.info("SAFE PC. Executing Proxmox Post Startup Script")
 

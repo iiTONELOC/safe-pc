@@ -26,6 +26,10 @@ async def drive_configurator(child: pe_spawn, root_password: str = "UseBetterPas
     wan_configured = False
     lan_configured = False
 
+    SAFE_LAN_PREFIX = environ.get("SAFE_LAN_PREFIX", "10.3.8")
+    SAFE_LAN_FW_HOST = environ.get("SAFE_LAN_FW_HOST", f"{SAFE_LAN_PREFIX}.1")
+    SAFE_PC_SUBNET_BIT_COUNT = int(environ.get("SAFE_LAN_BIT_COUNT", "24"))
+
     # login
     while not configured:
         try:
@@ -128,9 +132,9 @@ async def drive_configurator(child: pe_spawn, root_password: str = "UseBetterPas
                     child.expect("Configure IPv4 address LAN interface via DHCP?")
                     child.send("n\r")
                     child.expect("Enter the new LAN IPv4 address. Press <ENTER> for none")
-                    child.send("10.3.8.1\r")
+                    child.send(f"{SAFE_LAN_FW_HOST}\r")
                     child.expect("Enter the new LAN IPv4 subnet bit count")
-                    child.send("24\r")
+                    child.send(f"f{SAFE_PC_SUBNET_BIT_COUNT}\r")
                     child.expect("For a LAN, press <ENTER> for none")
                     child.send("\r")
                     child.expect("Configure IPv6 address LAN interface via DHCP6?")
@@ -140,9 +144,9 @@ async def drive_configurator(child: pe_spawn, root_password: str = "UseBetterPas
                     child.expect("Do you want to enable the DHCP server on LAN?")
                     child.send("y\r")  # enable dhcp server on lan
                     child.expect("Enter the start address of the IPv4 client address range")
-                    child.send("10.3.8.100\r")  # dhcp start
+                    child.send(f"{SAFE_LAN_PREFIX}.100\r")  # dhcp start
                     child.expect("Enter the end address of the IPv4 client address range")
-                    child.send("10.3.8.225\r")  # dhcp end
+                    child.send(f"{SAFE_LAN_PREFIX}.225\r")  # dhcp end
                     child.expect("Do you want to change the web GUI protocol from HTTPS to HTTP?")
                     child.send("n\r")  # dont change gui port
                     child.expect("Do you want to generate a new self-signed web GUI certificate?")
@@ -167,7 +171,7 @@ async def main() -> None:
     try:
         async with ConsoleDriver(100, logger, base_prefix) as console:
             logger.info(f"{base_prefix}Starting post-install configuration for VM ID 100.")
-            await drive_configurator(console.child, environ.get("SAFE_SENSE_PWD", None) or "UseBetterPassword!23")  # type: ignore
+            await drive_configurator(console.child, environ.get("SAFE_SENSE_PWD", "UseBetterPassword!23"))  # type: ignore
             # the main installer has finished its job, now we need to configure the system
     except Exception as e:
         logger.error(f"{base_prefix}Error during post-install configuration: {e}")

@@ -1,5 +1,6 @@
 from asyncio import sleep
 from logging import getLogger
+from os import environ
 
 from utm.utils.console_driver import ConsoleDriver
 from utm.proxmox.vms import stop_vm, get_vm_status
@@ -13,7 +14,7 @@ base_prefix = "[OPNSense Installer] "
 logout_time_secs = logout_time_mins * 60
 logger = getLogger("utm.opnsense.installer")
 
-DEFAULT_ROOT_PASSWORD = "UseBetterPassword!23"
+DEFAULT_ROOT_PASSWORD = environ.get("SAFE_SENSE_PWD", "UseBetterPassword!23")
 
 
 async def _set_correct_boot_remove_iso(vm_id: str) -> None:

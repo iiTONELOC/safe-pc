@@ -15,9 +15,17 @@ MAC_PATTERN = re_compile(r"^\*?[0-9A-Fa-f]{12}$")
 
 NETWORK_CONFIG_DEFAULTS = {
     "source": SOURCE_FROM_ANSWER,
-    "cidr": environ.get("SAFE_CIDR", "10.0.2.238/24"),
-    "gateway": environ.get("SAFE_GATEWAY", "10.0.2.1"),
-    "dns": environ.get("SAFE_DNS", "10.0.2.1"),
+    "cidr": environ.get("PROX_CIDR", "10.0.2.238/24"),
+    "gateway": environ.get("PROX_GATEWAY", "10.0.2.1"),
+    "dns": environ.get("PROX_DNS", "10.0.2.1"),
+    "mac_filter": "*bc241129f843",
+}
+
+NETWORK_CONFIG_DHCP_DEFAULTS = {  # type: ignore
+    "source": "from-dhcp",
+    "cidr": None,
+    "gateway": None,
+    "dns": None,
     "mac_filter": "*bc241129f843",
 }
 

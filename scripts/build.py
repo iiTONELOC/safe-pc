@@ -6,8 +6,8 @@ from os import getenv
 from pathlib import Path
 
 
-DEV_PROX_USER = getenv("SAFE_PROX_USER", "root")
-DEV_PROX_HOST = getenv("SAFE_CIDR", "10.0.2.238/24").split("/")[0]
+DEV_PROX_USER = getenv("PROX_USER", "root")
+DEV_PROX_HOST = getenv("PROX_CIDR", "10.0.2.238/24").split("/")[0]
 
 
 def main(dev: bool = False):
@@ -44,7 +44,36 @@ def main(dev: bool = False):
 
     # move the pyproject.toml and copy the opnsense config from the root of dist/safe_pc/utm to dist/safe_pc
     subprocess.run(["mv", str(src_dist / "utm" / "pyproject.toml"), str(safe_pc_dist / "pyproject.toml")])
-    subprocess.run(["cp", str(project_root / "safety_config.xml"), str(safe_pc_dist)])
+
+    # original config copy - commented out for now
+    # subprocess.run(["cp", str(project_root / "safety_config.xml"), str(safe_pc_dist)])
+
+    # create a copy of the config.xml in the project root - this is the one to modify
+    copy_file = project_root / "safety_config.copy.xml"
+    subprocess.run(
+        [
+            "cp",
+            str(project_root / "safety_config.xml"),
+            str(copy_file),
+        ]
+    )
+
+    # open the file, and replace all __SAFE_LAN_PREFIX__ with the env variable SAFE_LAN_PREFIX or 10.3.8
+    safe_lan_prefix = getenv("SAFE_LAN_PREFIX", "10.3.8")
+    with open(copy_file, "r") as f:
+        config_data = f.read()
+    config_data = config_data.replace("{{__SAFE_LAN_PREFIX__}}", safe_lan_prefix)
+    with open(copy_file, "w") as f:
+        f.write(config_data)
+
+    # move the modified copy to dist/safe_pc
+    subprocess.run(
+        [
+            "mv",
+            str(copy_file),
+            str(safe_pc_dist / "safety_config.xml"),
+        ]
+    )
 
     # if dev flag is set, deploy to proxmox
     if dev:
