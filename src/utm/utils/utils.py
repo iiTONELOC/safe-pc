@@ -122,7 +122,7 @@ def get_local_ip() -> str:
         str: The local IP address.
     """
     env_ip = environ.get("HOST_IP")
-    if env_ip:
+    if env_ip and env_ip.strip() != "":
         return env_ip
     hostname = gethostname()
     local_ip = gethostbyname(hostname)

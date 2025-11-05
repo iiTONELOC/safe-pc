@@ -33,6 +33,7 @@ data*/
 .log
 .env
 certs
+*.pem
 .pytest*
 tools/
 

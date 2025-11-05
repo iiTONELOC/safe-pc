@@ -6,7 +6,8 @@ from sys import exit, argv
 
 from utm.utils import (
     TempKeyFile,
-    get_local_ip,
+    # get_local_ip,
+    generate_self_signed_cert,
     handle_keyboard_interrupt,
 )
 from proxmox_auto_installer.utils import jwt_middleware
@@ -26,13 +27,16 @@ from utm.__main__ import setup_logging
 
 load_dotenv()
 
+
 _CURRENT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _MAIN = "proxmox_auto_installer.back_end.server:ProxHttpsServer.create_app"
 _DEV_MAIN = "proxmox_auto_installer.back_end.server:ProxHttpsServer.create_app_dev"
 
 
 class ProxHttpSever:
-    IP = get_local_ip()
+    # IP = get_local_ip()
+    IP = "0.0.0.0"
     PORT = 33007
 
     @staticmethod
@@ -69,7 +73,8 @@ class ProxHttpSever:
 
 # Proxmox Install Server
 class ProxHttpsServer:
-    IP = get_local_ip()
+    # IP = get_local_ip()
+    IP = "0.0.0.0"
     CORS_ORIGINS = [
         f"https://{IP}",
         f"https://{IP}:33008",
@@ -154,6 +159,10 @@ class ProxHttpsServer:
         setup_logging()
         cert_dir = Path(__file__).resolve().parents[3] / "certs"
         key_file_path = cert_dir / "safe-pc-key.pem"
+        # if the key file does not exist - create the certs
+        if not key_file_path.exists():
+            generate_self_signed_cert(**{"common_name": ProxHttpsServer.IP, "state": "FL", "locality": "Orlando"})
+
         with TempKeyFile(key_file_path.read_bytes()) as key_path:
             try:
                 config = Config(
