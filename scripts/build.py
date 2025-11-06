@@ -72,6 +72,15 @@ def main(dev: bool = False):
         ]
     )
 
+    # copy the env.sh to dist/safe_pc
+    subprocess.run(
+        [
+            "cp",
+            str(project_root / "env.sh"),
+            str(safe_pc_dist / "env.sh"),
+        ]
+    )
+
     # if dev flag is set, deploy to proxmox
     if dev:
         print("Deploying development build to Proxmox...")
