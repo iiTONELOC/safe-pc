@@ -8,17 +8,27 @@ services:
     restart: unless-stopped
     environment:
       PYTHONUNBUFFERED: "1"
+      HOST_IP: "${HOST_IP:-192.168.1.190}"
 
+      # Proxmox settings
       PROX_USER: "${SAFE_USER:-root}"
-      SAFE_LAN_PREFIX: "${192.168.1:-10.3.8}"
-      SAFE_LAN_BIT_COUNT: "${SAFE_SUBNET_BIT_COUNT:-24}"
-      SAFE_LAN_FW_HOST: "${SAFE_LAN_FW_HOST:-${SAFE_LAN_PREFIX}.1}"
-      PROX_CIDR: "${PROX_CIDR:-10.0.2.238/24}"
-      PROX_GATEWAY: "${PROX_GATEWAY:-10.0.2.1}"
-      PROX_DNS: "${PROX_DNS:-10.0.2.1}"
+      PROX_DNS: "${PROX_DNS:-192.168.1.253}"
       PROX_TZ: "${PROX_TZ:-America/New_York}"
-      HOST_IP: "${HOST_IP:-10.0.4.2}"
+      PROX_CIDR: "${PROX_CIDR:-192.168.38/24}"
+      PROX_GATEWAY: "${PROX_GATEWAY:-192.168.1.254}"
+
+      #OPNsense settings
+      SAFE_LAN_PREFIX: "${SAFE_LAN_PREFIX:-192.168.1}"
+      SAFE_LAN_BIT_COUNT: "${SAFE_SUBNET_BIT_COUNT:-24}"
+      SAFE_LAN_FW_HOST: "${SAFE_LAN_FW_HOST:-${SAFE_LAN_PREFIX}.254}"
       SAFE_SENSE_PWD: "${SAFE_SENSE_PWD:-UseBetterPassword!23}"
+
+      # Post installation management network settings - Optional, use only if post install network differs
+      # from the installation network
+      POST_INSTALL_TZ: "${POST_INSTALL_TZ:-America/New_York}"
+      POST_INSTALL_DNS: "${POST_INSTALL_DNS:-192.168.1.254}"
+      POST_INSTALL_CIDR: "${POST_INSTALL_CIDR:-192.168.1.38/24}"
+      POST_INSTALL_GATEWAY: "${POST_INSTALL_GATEWAY:-192.168.1.254}"
 
     volumes:
       - ./data:/app/data

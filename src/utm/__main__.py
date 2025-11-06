@@ -9,7 +9,8 @@ from collections.abc import Mapping, Sequence
 from logging.handlers import RotatingFileHandler
 from logging import INFO, WARNING, Logger, Formatter, StreamHandler, DEBUG, getLogger
 
-from dotenv import load_dotenv
+
+from utm.utils.utils import get_local_ip
 
 
 logger = getLogger("safe_pc.post_startup")
@@ -487,6 +488,72 @@ async def create_opnsense_vm():
     )
 
 
+async def handle_post_install_configuration():
+    flag_file_path = Path("/opt/safe_pc/.post_install_config_needed")
+
+    if not flag_file_path.exists():
+        logger.info("No post-install configuration needed, skipping.")
+        return
+
+    logger.info("Handling post-install configuration for Proxmox...")
+    # post install configuration sets new values for the proxmox management interface
+    TZ, DNS, CIDR, GATEWAY = (
+        os.getenv("POST_INSTALL_TZ"),
+        os.getenv("POST_INSTALL_DNS"),
+        os.getenv("POST_INSTALL_CIDR"),
+        os.getenv("POST_INSTALL_GATEWAY"),
+    )
+
+    if TZ:
+        logger.info(f"  Setting timezone to {TZ}...")
+        await run_command_async("timedatectl", "set-timezone", TZ, check=False)
+
+    if DNS:
+        logger.info(f"  Setting DNS to {DNS}...")
+        resolv_conf_content = f"nameserver {DNS}\n"
+        resolv_conf_path = Path("/etc/resolv.conf")
+        resolv_conf_path.write_text(resolv_conf_content)
+
+    if CIDR:
+        logger.info(f"  Setting management interface IP to {CIDR}...")
+        # find the main management interface
+        result_ip = await run_command_async("ip", "route", "get", f"{get_local_ip()}", check=False)
+        interface = None
+        for line in result_ip.stdout.splitlines():
+            match = search(r"dev (\S+)", line)
+            if match:
+                interface = match.group(1)
+                break
+
+        if interface:
+            # remove existing IPs on the interface
+            result_addr = await run_command_async("ip", "addr", "show", interface, check=False)
+            for line in result_addr.stdout.splitlines():
+                match = search(r"inet (\S+)", line)
+                if match:
+                    existing_ip = match.group(1)
+                    logger.info(f"    Removing existing IP {existing_ip} from {interface}...")
+                    await run_command_async("ip", "addr", "del", existing_ip, "dev", interface, check=False)
+            # add new IP
+            logger.info(f"    Adding new IP {CIDR} to {interface}...")
+            await run_command_async("ip", "addr", "add", CIDR, "dev", interface, check=False)
+
+    if GATEWAY:
+        logger.info(f"  Setting default gateway to {GATEWAY}...")
+        # remove existing default route
+        await run_command_async("ip", "route", "del", "default", check=False)
+        # add new default route
+        await run_command_async("ip", "route", "add", "default", "via", GATEWAY, check=False)
+
+    # if any of the above were set, remove the flag file and reset all networking services
+    flag_file_path.unlink(missing_ok=True)
+    logger.info("Post-install configuration complete, restarting networking services...")
+    await run_command_async("systemctl", "restart", "networking", check=False)
+    await run_command_async("systemctl", "restart", "pve-cluster", check=False)
+    await run_command_async("systemctl", "restart", "pvedaemon", check=False)
+    await run_command_async("systemctl", "restart", "pve-manager", check=False)
+
+
 # group and loop
 post_startup_steps = (
     (set_production_env, "Setting production environment variable"),
@@ -498,12 +565,12 @@ post_startup_steps = (
     (dl_opnsense_iso, "Checking for OPNsense ISO"),
     (create_vm_data_pool_if_missing, "Creating VM data pool if missing"),
     (create_opnsense_vm, "Checking for OPNsense VM"),
+    (handle_post_install_configuration, "Handling post-install configuration"),
 )
 
 
 @only_on_proxmox
 async def main():
-    load_dotenv()  # load any .env files if present
     setup_logging()  # ensures the logger is configured - poetry calls the main function directly
     logger.info("SAFE PC. Executing Proxmox Post Startup Script")
 
