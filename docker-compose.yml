@@ -8,11 +8,11 @@ services:
     restart: unless-stopped
     environment:
       PYTHONUNBUFFERED: "1"
-      HOST_IP: "${HOST_IP:-192.168.1.190}"
+      HOST_IP: "${HOST_IP:-192.168.1.206}"
 
       # Proxmox settings
       PROX_USER: "${SAFE_USER:-root}"
-      PROX_DNS: "${PROX_DNS:-192.168.1.253}"
+      PROX_DNS: "${PROX_DNS:-192.168.1.254}"
       PROX_TZ: "${PROX_TZ:-America/New_York}"
       PROX_CIDR: "${PROX_CIDR:-192.168.38/24}"
       PROX_GATEWAY: "${PROX_GATEWAY:-192.168.1.254}"

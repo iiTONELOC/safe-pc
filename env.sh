@@ -12,10 +12,10 @@ export PROX_USER="${PROX_USER:-root}"
 # Configuration settings for the out-of-band management interface
 export PROX_CIDR="${PROX_CIDR:-192.168.1.38/24}"
 export PROX_GATEWAY="${PROX_GATEWAY:-192.168.1.254}"
-export PROX_DNS="${PROX_DNS:-192.168.1.253}"
+export PROX_DNS="${PROX_DNS:-192.168.1.254}"
 export PROX_TZ="${PROX_TZ:-America/New_York}"
 
 # Host with Answer File
 # IP address for the machine serving the answer file, required by the
 # Proxmox installer.
-export HOST_IP="${HOST_IP:-192.168.1.180}"
+export HOST_IP="${HOST_IP:-192.168.1.206}"

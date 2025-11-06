@@ -258,7 +258,7 @@ Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 EnvironmentFile=-/etc/environment
 RemainAfterExit=yes
 ExecStartPre=/usr/bin/sleep 10
-ExecStart=/usr/bin/python3 {SAFE_PC_INSTALL_LOCATION}/src/utm
+ExecStart=/bin/bash -c 'source {SAFE_PC_INSTALL_LOCATION}/env.sh && exec /usr/bin/python3 {SAFE_PC_INSTALL_LOCATION}/src/utm'
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=safe-pc-post-startup
