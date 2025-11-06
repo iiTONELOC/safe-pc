@@ -29,10 +29,3 @@ services:
       SAFE_LAN_BIT_COUNT: "${SAFE_SUBNET_BIT_COUNT:-24}"
       SAFE_LAN_FW_HOST: "${SAFE_LAN_FW_HOST:-${SAFE_LAN_PREFIX}.254}"
       SAFE_SENSE_PWD: "${SAFE_SENSE_PWD:-UseBetterPassword!23}"
-
-      # Post installation management network settings - Optional, use only if post install network differs
-      # from the installation network
-      POST_INSTALL_TZ: "${POST_INSTALL_TZ:-America/New_York}"
-      POST_INSTALL_DNS: "${POST_INSTALL_DNS:-192.168.1.254}"
-      POST_INSTALL_CIDR: "${POST_INSTALL_CIDR:-192.168.1.38/24}"
-      POST_INSTALL_GATEWAY: "${POST_INSTALL_GATEWAY:-192.168.1.254}"

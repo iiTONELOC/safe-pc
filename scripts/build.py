@@ -45,9 +45,6 @@ def main(dev: bool = False):
     # move the pyproject.toml and copy the opnsense config from the root of dist/safe_pc/utm to dist/safe_pc
     subprocess.run(["mv", str(src_dist / "utm" / "pyproject.toml"), str(safe_pc_dist / "pyproject.toml")])
 
-    # original config copy - commented out for now
-    # subprocess.run(["cp", str(project_root / "safety_config.xml"), str(safe_pc_dist)])
-
     # create a copy of the config.xml in the project root - this is the one to modify
     copy_file = project_root / "safety_config.copy.xml"
     subprocess.run(
@@ -55,15 +52,6 @@ def main(dev: bool = False):
             "cp",
             str(project_root / "safety_config.xml"),
             str(copy_file),
-        ]
-    )
-
-    # copy the env.sh to dist/safe_pc
-    subprocess.run(
-        [
-            "cp",
-            str(project_root / "env.sh"),
-            str(safe_pc_dist / "env.sh"),
         ]
     )
 
@@ -95,23 +83,6 @@ def main(dev: bool = False):
                 f"{DEV_PROX_USER}@{DEV_PROX_HOST}:/opt/safe_pc/",
             ]
         )
-
-    #     # create a requirements.txt file in dist/safe_pc
-    #     # read the pyproject.toml to get the dependencies
-
-    #     requirements_file = safe_pc_dist / "requirements.txt"
-
-    #     reqs = """
-    # httpx>=0.28.1,<0.29.0
-    # aiofiles>=24.1.0,<25.0.0
-    # tqdm>=4.67.1,<5.0.0
-    # pexpect>=4.9.0,<5.0.0
-    # bcrypt>=5.0.0,<6.0.0
-    # cryptography>=46.0.3,<47.0.0
-    #     """
-
-    #     with open(requirements_file, "w") as f:
-    #         f.write(reqs.strip() + "\n")
 
     print(f"Build completed. Distribution available at: {dist_dir / 'safe_pc'}")
 

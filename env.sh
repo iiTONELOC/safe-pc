@@ -19,10 +19,3 @@ export PROX_TZ="${PROX_TZ:-America/New_York}"
 # IP address for the machine serving the answer file, required by the
 # Proxmox installer.
 export HOST_IP="${HOST_IP:-192.168.1.180}"
-
-# Post installation management network settings - Optional
-# Timezone for the installed Proxmox system
-export POST_INSTALL_TZ="${POST_INSTALL_TZ:-America/New_York}"
-export POST_INSTALL_DNS="${POST_INSTALL_DNS:-192.168.1.254}"
-export POST_INSTALL_CIDR="${POST_INSTALL_CIDR:-192.168.1.38/24}"
-export POST_INSTALL_GATEWAY="${POST_INSTALL_GATEWAY:-192.168.1.254}"

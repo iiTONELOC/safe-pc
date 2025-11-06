@@ -24,7 +24,6 @@ from utm.proxmox.system import (
     blacklist_host_driver_for_pci_id,
 )
 
-import aiofiles
 
 existing_num = 0
 need_to_config = True
@@ -398,24 +397,6 @@ async def run():
     if need_to_config:
         await sleep(5)  # wait a bit before starting install
         await install_opnsense(vm_id)
-        # configure any post-install settings here if needed
-        envs = environ.copy()
-        needs_post_install = False
-        flag_file_path = "/opt/safe_pc/data/proxmox_post_install_config_needed.flag"
-        for var in [
-            "POST_INSTALL_TZ",
-            "POST_INSTALL_DNS",
-            "POST_INSTALL_CIDR",
-            "POST_INSTALL_GATEWAY",
-        ]:
-            if var in envs:
-                needs_post_install = True
-                break
-        # write the flag file to indicate post-install settings need to be configured
-        if needs_post_install:
-            async with aiofiles.open(flag_file_path, "w") as flag_file:
-                await flag_file.write("post-install configuration needed\n")
-            logger.info("Post-install configuration flag file created.")
 
     else:
         logger.info("Starting Safe Sense Firewall VM.")

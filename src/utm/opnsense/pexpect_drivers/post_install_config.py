@@ -134,7 +134,7 @@ async def drive_configurator(child: pe_spawn, root_password: str = "UseBetterPas
                     child.expect("Enter the new LAN IPv4 address. Press <ENTER> for none")
                     child.send(f"{SAFE_LAN_FW_HOST}\r")
                     child.expect("Enter the new LAN IPv4 subnet bit count")
-                    child.send(f"f{SAFE_PC_SUBNET_BIT_COUNT}\r")
+                    child.send(f"{SAFE_PC_SUBNET_BIT_COUNT}\r")
                     child.expect("For a LAN, press <ENTER> for none")
                     child.send("\r")
                     child.expect("Configure IPv6 address LAN interface via DHCP6?")
