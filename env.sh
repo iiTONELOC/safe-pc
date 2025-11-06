@@ -18,7 +18,7 @@ export PROX_TZ="${PROX_TZ:-America/New_York}"
 # Host with Answer File
 # IP address for the machine serving the answer file, required by the
 # Proxmox installer.
-export HOST_IP="${HOST_IP:-192.168.1.190}"
+export HOST_IP="${HOST_IP:-192.168.1.180}"
 
 # Post installation management network settings - Optional
 # Timezone for the installed Proxmox system

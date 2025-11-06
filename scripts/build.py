@@ -58,6 +58,15 @@ def main(dev: bool = False):
         ]
     )
 
+    # copy the env.sh to dist/safe_pc
+    subprocess.run(
+        [
+            "cp",
+            str(project_root / "env.sh"),
+            str(safe_pc_dist / "env.sh"),
+        ]
+    )
+
     # open the file, and replace all __SAFE_LAN_PREFIX__ with the env variable SAFE_LAN_PREFIX or 10.3.8
     safe_lan_prefix = getenv("SAFE_LAN_PREFIX", "10.3.8")
     with open(copy_file, "r") as f:
