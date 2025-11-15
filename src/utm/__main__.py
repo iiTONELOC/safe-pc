@@ -1,13 +1,16 @@
 #!/usr/bin/python3.13
-import os
 import asyncio
 from sys import argv
 from pathlib import Path
-from re import search, sub, M, compile
+from os import environ, getenv
 from dataclasses import dataclass
+from re import search, sub, M, compile
+from socket import gethostname, gethostbyname
 from collections.abc import Mapping, Sequence
 from logging.handlers import RotatingFileHandler
 from logging import INFO, WARNING, Logger, Formatter, StreamHandler, DEBUG, getLogger
+
+# DO NOT IMPORT ANYTHING FROM UTM!
 
 
 logger = getLogger("safe_pc.post_startup")
@@ -19,6 +22,20 @@ BASH_RC = Path("/etc/bash.bashrc")
 SCRIPT_PATH = Path(argv[0]).resolve()
 
 
+def get_local_ip() -> str:
+    """Gets the local IP address of the machine.
+
+    Returns:
+        str: The local IP address.
+    """
+    env_ip = environ.get("HOST_IP")
+    if env_ip:
+        return env_ip
+    hostname = gethostname()
+    local_ip = gethostbyname(hostname)
+    return local_ip
+
+
 # Reusable Exports - Moved here to prevent circular imports - Clearly should go elsewhere
 def is_testing() -> bool:
     """Check if the code is running in a testing environment.
@@ -26,7 +43,7 @@ def is_testing() -> bool:
     Returns:
         bool: True if running tests, False otherwise.
     """
-    return os.getenv("CAPSTONE_TESTING", "0") == "1"
+    return getenv("CAPSTONE_TESTING", "0") == "1"
 
 
 def is_production() -> bool:
@@ -35,7 +52,7 @@ def is_production() -> bool:
     Returns:
         bool: True if running in production, False otherwise.
     """
-    return os.getenv("CAPSTONE_PRODUCTION", "0") == "1"
+    return getenv("CAPSTONE_PRODUCTION", "0") == "1"
 
 
 def is_verbose() -> bool:
@@ -44,7 +61,7 @@ def is_verbose() -> bool:
     Returns:
         bool: True if verbose mode is enabled, False otherwise.
     """
-    return os.getenv("CAPSTONE_VERBOSE", "0") == "1"
+    return getenv("CAPSTONE_VERBOSE", "0") == "1"
 
 
 def set_env_variable(key: str, value: str, system_wide: bool = True):
@@ -74,8 +91,8 @@ def set_env_variable(key: str, value: str, system_wide: bool = True):
     update_file(bashrc_path, bash_pattern, bash_line)
 
     # Set in current environment if not already set
-    if os.getenv(key, "") != value:
-        os.environ[key] = value
+    if getenv(key, "") != value:
+        environ[key] = value
 
 
 def remove_env_variable(key: str, system_wide: bool = True):
@@ -97,8 +114,8 @@ def remove_env_variable(key: str, system_wide: bool = True):
     remove_from_file(bashrc_path, bash_pattern)
 
     # Remove from current environment
-    if key in os.environ:
-        del os.environ[key]
+    if key in environ:
+        del environ[key]
 
 
 def _project_log_dir() -> Path:
@@ -336,7 +353,7 @@ async def update_and_upgrade_apt():
 
 def set_production_env():
     # Check current in-memory environment first
-    if os.getenv("CAPSTONE_PRODUCTION", "0") == "1":
+    if getenv("CAPSTONE_PRODUCTION", "0") == "1":
         logger.info("CAPSTONE_PRODUCTION is already set to '1' in current environment. Skipping.")
         return
 
@@ -348,7 +365,7 @@ async def dl_opnsense_iso():
         "venv/bin/python3",
         "src/utm/opnsense/installer.py",
         cwd=CWD,
-        env=os.environ,
+        env=environ,
     )
 
 
@@ -480,7 +497,7 @@ async def create_opnsense_vm():
         "src/utm/opnsense/vm_creator.py",
         cwd=CWD,
         check=False,
-        env=os.environ,
+        env=environ,
         logger=logger,
     )
 

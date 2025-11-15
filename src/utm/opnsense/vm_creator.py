@@ -1,6 +1,6 @@
 from os import environ
-from asyncio import sleep
 from logging import getLogger
+from asyncio import sleep, gather
 
 from utm.opnsense.iso.constants import OpnSenseConstants
 from utm.opnsense.installer import runner as install_opnsense
@@ -24,16 +24,20 @@ from utm.proxmox.system import (
     blacklist_host_driver_for_pci_id,
 )
 
+
 existing_num = 0
 need_to_config = True
 logger = getLogger("utm.opnsense.vm_creator")
 
 
 async def get_system_resources():
-    cpu_cores = await get_cpu_cores()
-    memory_gb = await get_system_memory_gb()
-    disk_size_gb = await get_disk_size_gb()
-    pci_nics = await find_pci_nics()
+    # run resource checks concurrently
+    cpu_cores, memory_gb, disk_size_gb, pci_nics = await gather(
+        get_cpu_cores(),
+        get_system_memory_gb(),
+        get_disk_size_gb(),
+        find_pci_nics(),
+    )
     return cpu_cores, memory_gb, disk_size_gb, pci_nics
 
 
@@ -396,6 +400,7 @@ async def run():
     if need_to_config:
         await sleep(5)  # wait a bit before starting install
         await install_opnsense(vm_id)
+
     else:
         logger.info("Starting Safe Sense Firewall VM.")
         await start_vm(vm_id)

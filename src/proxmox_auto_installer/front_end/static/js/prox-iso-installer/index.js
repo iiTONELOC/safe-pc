@@ -83,10 +83,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   populateCountrySelect(countries, countrySelect, currentCountry);
 
   // Initialize formState with default values
-  formState.network.dns = dns.value || null;
-  formState.network.cidr = cidr.value || null;
+  //  check the source to see if we need to set network values
+  const isFromAnswerFile = sourceSelect.value === "from-answer";
+
+  if (isFromAnswerFile) {
+    formState.network.cidr = cidr.value || null;
+    formState.network.gateway = gateway.value || null;
+    formState.network.dns = dns.value || null;
+  } else {
+    formState.network.cidr = null;
+    formState.network.gateway = null;
+    formState.network.dns = null;
+  }
+
   formState.network.source = sourceSelect.value;
-  formState.network.gateway = gateway.value || null;
   formState.global["root-password-hashed"] = null;
   formState.global.fqdn = fqdnInput.value || null;
   formState.global.email = emailInput.value || null;
@@ -161,8 +171,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // watch for changes to source select - enable/disable relevant fields
-  sourceSelect.addEventListener("change", (_) => {
+  const handleSourceChange = () => {
     // fields are only needed if sourcing from answer file
     const required = sourceSelect.value === "from-answer";
 
@@ -185,6 +194,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         field.value = "";
       }
     });
+  };
+
+  handleSourceChange();
+  // watch for changes to source select - enable/disable relevant fields
+  sourceSelect.addEventListener("change", (_) => {
+    // fields are only needed if sourcing from answer file
+    handleSourceChange();
   });
 
   // ensure submit button is correctly enabled/disabled on load

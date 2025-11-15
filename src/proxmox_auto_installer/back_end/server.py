@@ -16,7 +16,6 @@ from proxmox_auto_installer.back_end.https_routes import HttpsRoutes
 from proxmox_auto_installer.back_end.http_routes import HttpAPIRoutes
 
 from fastapi import FastAPI
-from dotenv import load_dotenv
 from uvicorn import Config, Server
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -25,7 +24,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from utm.__main__ import setup_logging
 
 
-load_dotenv()
+# pring the loaded env variables for debugging
+
 
 
 _CURRENT_DIR = Path(__file__).resolve().parent
@@ -186,6 +186,7 @@ def main():
     """
     Entry point for the backend servers
     """
+
     answer_server_thread = threading.Thread(target=lambda: run(ProxHttpSever.run()), daemon=True)  # type: ignore
     ui_api_server_thread = threading.Thread(target=lambda: run(ProxHttpsServer.run()), daemon=True)
 

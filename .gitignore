@@ -31,7 +31,7 @@ MANIFEST
 log[s]/
 data*/
 .log
-.env
+.env*
 certs
 .pytest*
 tools/

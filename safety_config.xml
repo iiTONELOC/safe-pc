@@ -114,8 +114,8 @@
     <dhcp_ranges uuid="9702c1c2-be4b-4b92-96c2-2a2e4634eff2">
       <interface>lan</interface>
       <set_tag/>
-      <start_addr>10.3.8.100</start_addr>
-      <end_addr>10.3.8.245</end_addr>
+      <start_addr>{{__SAFE_LAN_PREFIX__}}.100</start_addr>
+      <end_addr>{{__SAFE_LAN_PREFIX__}}.245</end_addr>
       <subnet_mask/>
       <constructor/>
       <mode/>
@@ -178,12 +178,12 @@
         <port>GRP_TCP_OUT</port>
       </destination>
       <updated>
-        <username>root@10.3.8.203</username>
+        <username>root@{{__SAFE_LAN_PREFIX__}}.203</username>
         <time>1761667028.69</time>
         <description>/firewall_rules_edit.php made changes</description>
       </updated>
       <created>
-        <username>root@10.3.8.203</username>
+        <username>root@{{__SAFE_LAN_PREFIX__}}.203</username>
         <time>1761667028.69</time>
         <description>/firewall_rules_edit.php made changes</description>
       </created>
@@ -205,12 +205,12 @@
         <port>GRP_UDP_OUT</port>
       </destination>
       <updated>
-        <username>root@10.3.8.203</username>
+        <username>root@{{__SAFE_LAN_PREFIX__}}.203</username>
         <time>1761667082.72</time>
         <description>/firewall_rules_edit.php made changes</description>
       </updated>
       <created>
-        <username>root@10.3.8.203</username>
+        <username>root@{{__SAFE_LAN_PREFIX__}}.203</username>
         <time>1761667082.72</time>
         <description>/firewall_rules_edit.php made changes</description>
       </created>
@@ -232,12 +232,12 @@
         <port>53</port>
       </destination>
       <updated>
-        <username>root@10.3.8.203</username>
+        <username>root@{{__SAFE_LAN_PREFIX__}}.203</username>
         <time>1761869465.23</time>
         <description>/firewall_rules_edit.php made changes</description>
       </updated>
       <created>
-        <username>root@10.3.8.203</username>
+        <username>root@{{__SAFE_LAN_PREFIX__}}.203</username>
         <time>1761869405.10</time>
         <description>/firewall_rules_edit.php made changes</description>
       </created>
@@ -258,12 +258,12 @@
         <any>1</any>
       </destination>
       <updated>
-        <username>root@10.3.8.203</username>
+        <username>root@{{__SAFE_LAN_PREFIX__}}.203</username>
         <time>1761667119.77</time>
         <description>/firewall_rules_edit.php made changes</description>
       </updated>
       <created>
-        <username>root@10.3.8.203</username>
+        <username>root@{{__SAFE_LAN_PREFIX__}}.203</username>
         <time>1761667119.77</time>
         <description>/firewall_rules_edit.php made changes</description>
       </created>
@@ -276,7 +276,7 @@
     <prefer>0.opnsense.pool.ntp.org</prefer>
   </ntpd>
   <revision>
-    <username>root@10.3.8.203</username>
+    <username>root@{{__SAFE_LAN_PREFIX__}}.203</username>
     <description>/api/auth/user/add_api_key/safety made changes</description>
     <time>1761668270.89</time>
   </revision>
@@ -887,7 +887,7 @@ SVC_WIREGUARD</content>
         <enabled>1</enabled>
         <ips>1</ips>
         <promisc>1</promisc>
-        <interfaces>lan</interfaces>
+        <interfaces>lan,wan</interfaces>
         <homenet>192.168.0.0/16,10.0.0.0/8,172.16.0.0/12</homenet>
         <defaultPacketSize/>
         <UpdateCron>65558734-e7c5-4fc6-b5c3-d97748a17ded</UpdateCron>

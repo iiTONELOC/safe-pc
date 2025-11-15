@@ -1,5 +1,6 @@
 from asyncio import sleep
 from logging import getLogger
+from os import environ
 from utm.utils.utils import strip_ansi_escape_sequences  # type: ignore
 from utm.opnsense.pexpect_drivers.file_c_streamer import stream_file_in_chunks  # type: ignore
 from pexpect import spawn as pe_spawn, TIMEOUT, EOF  # type: ignore
@@ -14,7 +15,7 @@ async def xml_template_sync_driver(child: pe_spawn, template: str, script: str) 
     buffer = ""
     merged = False
     waiting_for_reboot = False
-
+    PASS = environ.get("SAFE_SENSE_PWD", "UseBetterPassword!23")
     # send enter first to get past any initial prompts and ensure we see the main screen
     child.send("\r")
     await sleep(1)
@@ -28,7 +29,7 @@ async def xml_template_sync_driver(child: pe_spawn, template: str, script: str) 
             if "login:" in screen_buffer:
                 child.send("root\r")
                 await sleep(1)
-                child.send("UseBetterPassword!23\r")  # default password, will be changed
+                child.send(f"{PASS}\r")  # default password, will be changed
                 buffer = ""
             elif "Enter an option:" in screen_buffer:
                 # use the shell
@@ -94,7 +95,7 @@ async def xml_template_sync_driver(child: pe_spawn, template: str, script: str) 
             if "login:" in screen_buffer:
                 child.send("root\r")
                 await sleep(1)
-                child.send("UseBetterPassword!23\r")  # default password, will be changed
+                child.send(f"{PASS}\r")  # default password, will be changed
                 buffer = ""
             elif "Enter an option:" in screen_buffer:
                 # use the shell
