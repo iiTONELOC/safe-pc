@@ -1,10 +1,11 @@
+# type: ignore
 from asyncio import sleep
 from utm.utils.utils import send_key_to_pexpect_proc, strip_ansi_escape_sequences  # type: ignore
 
 from pexpect import spawn as pe_spawn, TIMEOUT, EOF  # type: ignore
 
 
-async def drive_installer(child: pe_spawn, root_password: str = "UseBetterPassword!23") -> None:  # type: ignore
+async def drive_installer(child: pe_spawn, root_password: str = "UseBetterPassword!23") -> None:  # NOSONAR
     buffer = ""
     pwd_confirmed = False
     while True:

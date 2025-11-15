@@ -1,3 +1,4 @@
+from os import getenv
 import subprocess
 import tempfile
 from uuid import uuid4
@@ -8,15 +9,15 @@ from collections.abc import Callable
 
 
 from proxmox_auto_installer.iso.helpers import (
-    create_answer_file,
+    # create_answer_file,
     create_auto_installer_mode_file,
 )
 from proxmox_auto_installer.iso.tools import (
-    unpack_initrd,
-    repack_initrd,
+    # unpack_initrd,
+    # repack_initrd,
     xorriso_repack_iso,
     xorriso_extract_iso,
-    replace_initrd_file,
+    # replace_initrd_file,
 )
 from proxmox_auto_installer.iso.downloader import (
     validate_iso_url,
@@ -33,7 +34,8 @@ from utm.__main__ import (
 from utm.utils import handle_keyboard_interrupt, ISODownloader
 
 
-TOTAL_STEPS = 20
+# TOTAL_STEPS = 20
+TOTAL_STEPS = 15
 SAFE_PC_INSTALL_LOCATION = "/opt/safe_pc"
 
 
@@ -116,7 +118,7 @@ class ModifiedProxmoxISO:
         ]:
             path.mkdir(parents=True, exist_ok=True)
 
-    async def create_modified_iso(self, answer_file: str, on_update: Callable[[int, str], Any]) -> Path | None:
+    async def create_modified_iso(self, on_update: Callable[[int, str], Any]) -> Path | None:
         """Performs the actual ISO modification."""
         self.LOGGER.info(f"Modifying ISO at {self.base_iso.iso_path}")
 
@@ -139,59 +141,59 @@ class ModifiedProxmoxISO:
         self.LOGGER.info("Created auto-installer-mode.toml")
 
         # 7. Extract initrd.img
-        await on_update(7, "Extracting initrd.img...")
+        # await on_update(7, "Extracting initrd.img...")
 
-        ok = await unpack_initrd(
-            initrd_path=self.extracted_iso_dir / "boot" / "initrd.img",
-            out_dir=self.extracted_ram_disk,
-        )
+        # ok = await unpack_initrd(
+        #     initrd_path=self.extracted_iso_dir / "boot" / "initrd.img",
+        #     out_dir=self.extracted_ram_disk,
+        # )
 
-        if not ok:
-            self.LOGGER.error("Failed to unpack initrd.img")
-            return None
+        # if not ok:
+        #     self.LOGGER.error("Failed to unpack initrd.img")
+        #     return None
 
-        self.LOGGER.info(f"Extracted initrd.img to {self.extracted_ram_disk}")
+        # self.LOGGER.info(f"Extracted initrd.img to {self.extracted_ram_disk}")
 
-        # 8. Add answer file
-        await on_update(8, "Adding answer file to initrd...")
-        create_answer_file(
-            path_to_unpacked_iso=self.extracted_ram_disk,
-            using_answer_file=answer_file,
-            verify_flag=False,
-        )
+        # # 8. Add answer file
+        # await on_update(8, "Adding answer file to initrd...")
+        # create_answer_file(
+        #     path_to_unpacked_iso=self.extracted_ram_disk,
+        #     using_answer_file=answer_file,
+        #     verify_flag=False,
+        # )
 
-        self.LOGGER.info("Added answer file to initrd")
+        # self.LOGGER.info("Added answer file to initrd")
 
-        await on_update(9, "Repacking initrd.img...")
+        # await on_update(9, "Repacking initrd.img...")
 
-        ok = await repack_initrd(
-            unpacked_initrd_dir=self.extracted_ram_disk,
-            output_initrd=self.repacked_ram_disk,
-        )
+        # ok = await repack_initrd(
+        #     unpacked_initrd_dir=self.extracted_ram_disk,
+        #     output_initrd=self.repacked_ram_disk,
+        # )
 
-        if not ok:
-            self.LOGGER.error("Failed to repack initrd.img")
-            return None
+        # if not ok:
+        #     self.LOGGER.error("Failed to repack initrd.img")
+        #     return None
 
-        self.LOGGER.info(f"Repacked initrd.img to {self.repacked_ram_disk}, replacing in ISO")
+        # self.LOGGER.info(f"Repacked initrd.img to {self.repacked_ram_disk}, replacing in ISO")
         # 12. Replace initrd.img in boot
 
-        await on_update(10, "Replacing initrd.img in ISO...")
-        boot_initrd_path = self.extracted_iso_dir / "boot" / "initrd.img"
+        # await on_update(10, "Replacing initrd.img in ISO...")
+        # boot_initrd_path = self.extracted_iso_dir / "boot" / "initrd.img"
 
-        await replace_initrd_file(
-            new_file=self.repacked_ram_disk,
-            dest_file=boot_initrd_path,
-        )
+        # await replace_initrd_file(
+        #     new_file=self.repacked_ram_disk,
+        #     dest_file=boot_initrd_path,
+        # )
         out = self.repacked_iso_dir / f"auto-installer-{self.job_id}.iso"
-        # self.LOGGER.info(f"Replaced initrd.img in ISO successfully, repacking ISO to {out}")
+        # # self.LOGGER.info(f"Replaced initrd.img in ISO successfully, repacking ISO to {out}")
 
         # unsquash the rootfs
         # make an extracted squashfs dir
         extracted_squashfs_dir = self.work_dir / "extracted_squashfs"
         extracted_squashfs_dir.mkdir(parents=True, exist_ok=True)
         # 11. Unsquash the rootfs
-        await on_update(11, "Unsquashing rootfs...")
+        await on_update(7, "Unsquashing rootfs...")
         status = await run_command_async(
             "unsquashfs",
             "-no-xattrs",
@@ -210,7 +212,7 @@ class ModifiedProxmoxISO:
 
         # ensure the UTM is built
         await run_command_async("poetry", "run", "build-utm", check=True, cwd=Path(__file__).resolve().parents[3])
-        await on_update(12, "Copying UTM to rootfs...")
+        await on_update(8, "Copying UTM to rootfs...")
 
         # copy the dist/safe_pc folder into the extracted squashfs
         dist_safe_pc_path = Path(__file__).resolve().parents[3] / "dist" / "safe_pc"
@@ -229,7 +231,7 @@ class ModifiedProxmoxISO:
             str(target_safe_pc_path.parent),
             check=True,
         )
-        await on_update(13, "Setting executable permissions...")
+        await on_update(9, "Setting executable permissions...")
         # ensure everything is executable
         await run_command_async(
             "chmod",
@@ -243,7 +245,7 @@ class ModifiedProxmoxISO:
         # oneshot coupled with remainafterexit ensures the service only runs once, multiple calls to start
         # will not re-run the service once it has been marked as active
         # https://www.redhat.com/en/blog/systemd-oneshot-service
-        await on_update(14, "Creating systemd service for first boot...")
+        await on_update(10, "Creating systemd service for first boot...")
         service_str = f"""
 [Unit]
 Description=Safe PC Post Startup Service
@@ -288,7 +290,7 @@ WantedBy=multi-user.target
 
         # download opnsense iso now and roll it up into the proxmox iso at
         # the expected location /var/lib/vz/template/iso/
-        await on_update(0, "Downloading OPNsense ISO...")
+        await on_update(11, "Downloading OPNsense ISO...")
         success = await download_and_verify_opnsense_iso(
             on_update=lambda p, t, m: on_update(
                 max(0, min(int((p / t) * TOTAL_STEPS), TOTAL_STEPS)), m or "OPNsense ISO..."
@@ -316,7 +318,7 @@ WantedBy=multi-user.target
         #     check=True,
         # )
 
-        await on_update(16, "Converting OPNsense IMG to ISO format...")
+        await on_update(12, "Converting OPNsense IMG to ISO format...")
         temp_iso_path = tempfile.mkstemp(suffix=".iso")[1]
 
         # convert the img to iso using qemu-img
@@ -329,7 +331,7 @@ WantedBy=multi-user.target
             temp_iso_path,
             check=True,
         )
-        await on_update(17, "Moving OPNsense ISO to rootfs...")
+        await on_update(13, "Moving OPNsense ISO to rootfs...")
         # the serial is an img, so we need to convert it to an iso and then copy it over
         await run_command_async(
             "mv",
@@ -340,7 +342,7 @@ WantedBy=multi-user.target
 
         self.LOGGER.info(f"Moved OPNsense ISO to {target_iso_dir}, successfully. Repacking rootfs...")
 
-        await on_update(18, "Repacking rootfs...")
+        await on_update(14, "Repacking rootfs...")
         tmp_squash = Path("/tmp/pve-base.squashfs")
 
         status = await run_command_async(
@@ -441,12 +443,13 @@ WantedBy=multi-user.target
         if self.work_dir.exists():
             try:
                 # ensure we own everything
-                subprocess.run(["/bin/chown", "-R", "dev:dev", str(self.work_dir)], check=False)
+                USER = getenv("USER", "dev")
+                subprocess.run(["chown", "-R", f"{USER}:{USER}", str(self.work_dir)], check=False)
                 # ensure write perms so rm won't choke
-                subprocess.run(["/bin/chmod", "-R", "u+rwx", str(self.work_dir)], check=False)
+                subprocess.run(["chmod", "-R", "u+rwx", str(self.work_dir)], check=False)
 
                 # now delete the folder
-                subprocess.run(["/bin/rm", "-rf", str(self.work_dir)], check=True)
+                subprocess.run(["rm", "-rf", str(self.work_dir)], check=True)
                 self.LOGGER.info(f"Cleaned up job folder at {self.work_dir}")
             except Exception as e:
                 self.LOGGER.error(f"Failed to delete job folder {self.work_dir}: {e}")

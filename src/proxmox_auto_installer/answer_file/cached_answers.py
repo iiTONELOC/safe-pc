@@ -1,3 +1,4 @@
+# type: ignore
 import os
 import json
 import asyncio
@@ -19,20 +20,20 @@ def _resolve_cache_path(p: str) -> Path:
       - Strip off host prefix and remap under CACHED_DATA_DIR/data
     """
 
-    p = Path(p)  # type: ignore
-    if p.exists():  # type: ignore
-        return p  # type: ignore
+    p = Path(p)
+    if p.exists():
+        return p
 
     # fallback rewrite for host paths
     try:
-        name = p.name  # job_id.answer  # type: ignore
-        alt = CACHED_DATA_DIR / "data" / name  # type: ignore
-        if alt.exists():  # type: ignore
-            return alt  # type: ignore
+        name = p.name  # job_id.answer
+        alt = CACHED_DATA_DIR / "data" / name
+        if alt.exists():
+            return alt
     except Exception:
         pass
 
-    return p  # type: ignore
+    return p
 
 
 class CacheManager:

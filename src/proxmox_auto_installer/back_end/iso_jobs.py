@@ -3,7 +3,6 @@ import asyncio
 from uuid import uuid4, UUID
 from typing import Literal
 from logging import getLogger
-
 from fastapi import WebSocket
 
 from proxmox_auto_installer.answer_file.cached_answers import CacheManager
@@ -110,13 +109,15 @@ class Job:
             return
 
         # modify it
-        await self.update_progress(calculate_percentage(4, TOTAL_STEPS), "Modifying Proxmox ISO...")
+        await self.update_progress(
+            calculate_percentage(4, TOTAL_STEPS), "Modifying Proxmox ISO..."
+        )
         LOGGER.info("Creating ModifiedProxmoxISO instance...")
 
         self._modified_iso = ModifiedProxmoxISO(self._proxmox_iso, str(self.job_id))
         try:
             modified_iso_path = await self._modified_iso.create_modified_iso(
-                answer_file=self.info,
+                # answer_file=self.info,
                 on_update=lambda p, msg: asyncio.create_task(
                     self.update_progress(
                         calculate_percentage(p, TOTAL_STEPS),
@@ -126,7 +127,9 @@ class Job:
             )
             # save the answer file to cache
             if modified_iso_path:
-                await self.cache.put_answer_bytes(self.job_id.__str__(), self.info.encode())
+                await self.cache.put_answer_bytes(
+                    self.job_id.__str__(), self.info.encode()
+                )
 
             LOGGER.info(f"Modified ISO path: {modified_iso_path}")
         except Exception as e:
@@ -152,7 +155,9 @@ class Job:
         self._stop_requested = True
         await self.on_finish(status=status, progress=progress)
 
-    async def on_finish(self, status: job_status = JobStatus.COMPLETED, progress: int = 100):
+    async def on_finish(
+        self, status: job_status = JobStatus.COMPLETED, progress: int = 100
+    ):
         await self.update_status(status)
         await self.update_progress(progress)
 
@@ -162,7 +167,9 @@ class Job:
                 isos_root = self._modified_iso.base_iso.iso_dir.parent  # type: ignore
                 final_path = self._modified_iso.move_iso_to_final_location(final_dir=isos_root)  # type: ignore
                 if self.cache:
-                    await self.cache.set_iso_path(self.job_id.__str__(), final_path)  # STORE FILE PATH
+                    await self.cache.set_iso_path(
+                        self.job_id.__str__(), final_path
+                    )  # STORE FILE PATH
                 # delete the job folder, iso is already created and moved, its not needed anymore
 
                 LOGGER.info(f"ISO moved to final location: {final_path}")

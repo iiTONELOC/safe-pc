@@ -26,7 +26,6 @@ NETWORK_CONFIG_DHCP_DEFAULTS = {  # type: ignore
     "cidr": None,
     "gateway": None,
     "dns": None,
-    "mac_filter": "*bc241129f843",
 }
 
 

@@ -887,7 +887,7 @@ SVC_WIREGUARD</content>
         <enabled>1</enabled>
         <ips>1</ips>
         <promisc>1</promisc>
-        <interfaces>lan</interfaces>
+        <interfaces>lan,wan</interfaces>
         <homenet>192.168.0.0/16,10.0.0.0/8,172.16.0.0/12</homenet>
         <defaultPacketSize/>
         <UpdateCron>65558734-e7c5-4fc6-b5c3-d97748a17ded</UpdateCron>

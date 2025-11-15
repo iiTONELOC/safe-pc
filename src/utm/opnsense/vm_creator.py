@@ -1,6 +1,6 @@
 from os import environ
-from asyncio import sleep
 from logging import getLogger
+from asyncio import sleep, gather
 
 from utm.opnsense.iso.constants import OpnSenseConstants
 from utm.opnsense.installer import runner as install_opnsense
@@ -31,10 +31,13 @@ logger = getLogger("utm.opnsense.vm_creator")
 
 
 async def get_system_resources():
-    cpu_cores = await get_cpu_cores()
-    memory_gb = await get_system_memory_gb()
-    disk_size_gb = await get_disk_size_gb()
-    pci_nics = await find_pci_nics()
+    # run resource checks concurrently
+    cpu_cores, memory_gb, disk_size_gb, pci_nics = await gather(
+        get_cpu_cores(),
+        get_system_memory_gb(),
+        get_disk_size_gb(),
+        find_pci_nics(),
+    )
     return cpu_cores, memory_gb, disk_size_gb, pci_nics
 
 
