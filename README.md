@@ -171,7 +171,7 @@ Poetry commands are included but usage is not required. To install Poetry, [refe
 
 6. The env.sh file contains environment variable exports with default values:
 
-   > [!Note]
+   > Note
    > If any of the default values need to be changed, simply change the value after the `:-` as appropriate:
 
    ```md
@@ -207,13 +207,15 @@ Poetry commands are included but usage is not required. To install Poetry, [refe
    ```
 
    > Note
+
    > `SAFE_SENSE_PWD` uses a default value! This is not secure and it should be changed!
 
    ```sh
    nano env.sh
    ```
 
-   > [!Note]
+   > Note.
+
    > Make changes after the `:-`.
    >
    > Save changes with <kbd>Ctrl</kbd> + <kbd>S</kbd> and leave with <kbd>Ctrl</kbd> + <kbd>X</kbd>
@@ -231,6 +233,7 @@ Poetry commands are included but usage is not required. To install Poetry, [refe
 2. Modify the Dockerfile-Compose file to overwrite any default env values if needed:
 
    > Note
+
    > `SAFE_SENSE_PWD` uses a default value! This is not secure and it should be changed!
 
    ```yml
@@ -255,7 +258,8 @@ Poetry commands are included but usage is not required. To install Poetry, [refe
      SAFE_SENSE_PWD: "${SAFE_SENSE_PWD:-UseBetterPassword!23}"
    ```
 
-   > [!Note]
+   > Note.
+
    > Make changes after the `:-`.
    >
    > Save changes with <kbd>Ctrl</kbd> + <kbd>S</kbd> and leave with <kbd>Ctrl</kbd> + <kbd>X</kbd>
@@ -323,7 +327,7 @@ Poetry commands are included but usage is not required. To install Poetry, [refe
 
    ```
 
-   > [!Tip]
+   > Note.
    > The self-signed cert should be generated automatically if missing. However, if it isn't and the server will not
    > start, it can be generated manually:
    >
@@ -347,13 +351,10 @@ Poetry commands are included but usage is not required. To install Poetry, [refe
    tail -f /opt/safe_pc/logs/safe_pc.log
    ```
 
-   > [!Tip]
    > Proxmox's Web UI is available at `https://:<PROX_CIDR: "${PROX_CIDR:-192.168.38/24}".split("/")[0]>:8006`
 
-   > [!Important]
    > Once the OPNsense installation has started, the remaining interfaces can be connected.
 
-   > [!Warning]
    > This will result in a loss of Internet until the installation is complete.
 
 ## License
