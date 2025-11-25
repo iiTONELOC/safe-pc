@@ -360,10 +360,15 @@ WantedBy=multi-user.target
             self.LOGGER.error(f"Failed to repack rootfs: {status.stderr}")
             return None
 
+        target = self.extracted_iso_dir / "pve-base.squashfs"
+
+        # Note: Proxmox 9.1-1 extracts pve-base.squashfs as read-only, mv hangs on overwrite
+        await run_command_async("rm", "-f", str(target), check=False)
+
         await run_command_async(
             "mv",
             str(tmp_squash),
-            str(self.extracted_iso_dir / "pve-base.squashfs"),
+            str(target),
             check=True,
         )
 

@@ -1,5 +1,5 @@
 services:
-  safe-pc:
+  latest:
     build:
       context: .
       dockerfile: Dockerfile
@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     environment:
       PYTHONUNBUFFERED: "1"
-      HOST_IP: "${HOST_IP:-192.168.1.206}"
+      HOST_IP: "${HOST_IP:-10.0.4.2}"
 
       # Proxmox settings
       PROX_USER: "${SAFE_USER:-root}"

@@ -126,7 +126,7 @@ def get_local_ip() -> str:
         return env_ip
     hostname = gethostname()
     local_ip = gethostbyname(hostname)
-    return local_ip
+    return local_ip or "0.0.0.0"
 
 
 def handle_keyboard_interrupt(

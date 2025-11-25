@@ -2,11 +2,9 @@ import threading
 from asyncio import run
 from pathlib import Path
 from sys import exit, argv
-
-
 from utm.utils import (
     TempKeyFile,
-    # get_local_ip,
+    get_local_ip,
     generate_self_signed_cert,
     handle_keyboard_interrupt,
 )
@@ -26,8 +24,7 @@ from utm.__main__ import setup_logging
 
 # pring the loaded env variables for debugging
 
-
-
+# HOST_IP = get_local_ip()
 _CURRENT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _MAIN = "proxmox_auto_installer.back_end.server:ProxHttpsServer.create_app"
@@ -35,8 +32,8 @@ _DEV_MAIN = "proxmox_auto_installer.back_end.server:ProxHttpsServer.create_app_d
 
 
 class ProxHttpSever:
-    # IP = get_local_ip()
-    IP = "0.0.0.0"
+    IP = get_local_ip()
+
     PORT = 33007
 
     @staticmethod
@@ -73,8 +70,8 @@ class ProxHttpSever:
 
 # Proxmox Install Server
 class ProxHttpsServer:
-    # IP = get_local_ip()
-    IP = "0.0.0.0"
+    IP = get_local_ip()
+
     CORS_ORIGINS = [
         f"https://{IP}",
         f"https://{IP}:33008",
