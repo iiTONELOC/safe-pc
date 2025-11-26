@@ -14,7 +14,7 @@
 
 ### SAFE-PC ISO Creation
 
-[![Demo](./docs/assets/images/vid-preview.png)](https://drive.google.com/file/d/1IGebJqlSwDaS-BZdcW4aNUjknVJzXfZ4/view?usp=sharing)
+[![Demo](./docs/assets/images/vid-preview.png)](https://drive.google.com/file/d/1D4e5CHOru8I3JndtXuie1ork3g2YNsbW/view?usp=sharing)
 
 > Note. This video provides an overview of creating an unattended installation ISO and the user interface.
 
